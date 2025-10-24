@@ -40,6 +40,10 @@ El flujo es bidireccional: los usuarios reportan, el tránsito responde y la app
 | **Visualización futura** | Power BI / Grafana                              |
 | **Control de versiones** | Git + GitHub                                    |
 
+📚 Documentación adicional
+
+- [Guía para Renombrar Commits](COMMIT_RENAME_GUIDE.md): Mejores prácticas para mensajes de commit y cómo modificarlos.
+
 👥 Roles de usuario
 
 👤 Ciudadano:
