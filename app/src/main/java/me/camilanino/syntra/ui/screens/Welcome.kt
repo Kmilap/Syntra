@@ -17,6 +17,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.foundation.Image
 import me.camilanino.syntra.R
 
 @Composable
@@ -29,10 +30,10 @@ fun WelcomeScreen() {
             .background(Color.White),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        // --- HEADER CON EFECTO WOW ---
+        // --- HEADER PRINCIPAL ---
         CoralHeader()
 
-        Spacer(modifier = Modifier.height(20.dp))
+        Spacer(modifier = Modifier.height(28.dp))
 
         // --- CUADRO DE OPCIONES ---
         Card(
@@ -58,7 +59,7 @@ fun WelcomeScreen() {
             }
         }
 
-        Spacer(modifier = Modifier.height(30.dp))
+        Spacer(modifier = Modifier.height(35.dp))
 
         // --- BOTÓN DE INICIO ---
         Button(
@@ -69,29 +70,34 @@ fun WelcomeScreen() {
                 .height(55.dp),
             shape = RoundedCornerShape(40.dp)
         ) {
-            Text("Iniciar sesión", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Medium)
+            Text(
+                "Iniciar sesión",
+                color = Color.White,
+                fontSize = 16.sp,
+                fontWeight = FontWeight.Medium
+            )
         }
     }
 }
 
 @Composable
 fun CoralHeader() {
-    // Animación de brillo diagonal
-    val infiniteTransition = rememberInfiniteTransition()
+    // --- Animación de brillo diagonal sutil ---
+    val infiniteTransition = rememberInfiniteTransition(label = "")
     val shimmer = infiniteTransition.animateFloat(
         initialValue = 0f,
         targetValue = 1f,
         animationSpec = infiniteRepeatable(
             animation = tween(durationMillis = 5000, easing = LinearEasing),
             repeatMode = RepeatMode.Restart
-        )
+        ), label = ""
     )
 
     Box(
         modifier = Modifier
             .fillMaxWidth()
             .fillMaxHeight(0.45f)
-            .clip(RoundedCornerShape(bottomStart = 22.dp, bottomEnd = 22.dp))
+            .clip(RoundedCornerShape(bottomStart = 26.dp, bottomEnd = 26.dp))
             .background(Color(0xFFE74C3C))
             .drawWithCache {
                 val gradient = Brush.linearGradient(
@@ -110,14 +116,14 @@ fun CoralHeader() {
             },
         contentAlignment = Alignment.Center
     ) {
-        // Textura de puntitos sutil
+        // --- Textura de puntitos sutil ---
         Canvas(modifier = Modifier.matchParentSize()) {
             val spacing = 24.dp.toPx()
-            val radius = 1.1.dp.toPx()
+            val radius = 1.2.dp.toPx()
             for (x in 0..(size.width / spacing).toInt()) {
                 for (y in 0..(size.height / spacing).toInt()) {
                     drawCircle(
-                        color = Color.White.copy(alpha = 0.12f),
+                        color = Color.White.copy(alpha = 0.16f),
                         radius = radius,
                         center = Offset(x * spacing, y * spacing)
                     )
@@ -125,22 +131,27 @@ fun CoralHeader() {
             }
         }
 
-        // Contenido central
+        // --- Contenido central del Header ---
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Icon(
+            Image(
                 painter = painterResource(id = R.drawable.logo_syntra),
                 contentDescription = "Logo Syntra",
-                tint = Color.White,
-                modifier = Modifier.size(58.dp)
+                modifier = Modifier
+                    .size(80.dp)
+                    .padding(bottom = 8.dp)
             )
-            Spacer(modifier = Modifier.height(10.dp))
+
+            Spacer(modifier = Modifier.height(8.dp))
+
             Text(
                 text = "Syntra",
                 fontSize = 34.sp,
                 fontWeight = FontWeight.Bold,
                 color = Color.White
             )
+
             Spacer(modifier = Modifier.height(6.dp))
+
             Text(
                 text = "Elige cómo quieres iniciar sesión",
                 fontSize = 14.sp,
