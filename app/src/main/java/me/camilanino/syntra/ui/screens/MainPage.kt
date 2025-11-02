@@ -36,6 +36,8 @@ private val SyntraGray   = Color(0xFF6C7278)
 private val SyntraGreen  = Color(0xFF63B58D)
 private val SyntraDarkBlue = Color(0xFF273746) // color del botón central
 
+
+
 /* ====== MAIN PAGE ====== */
 @Composable
 fun MainPage() {

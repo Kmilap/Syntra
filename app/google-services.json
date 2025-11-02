@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "549625965228",
+    "project_id": "proyectomoviles-922df",
+    "storage_bucket": "proyectomoviles-922df.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:549625965228:android:1d7e097c0d18717bd18d09",
+        "android_client_info": {
+          "package_name": "me.camilanino.syntra"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBM2n2drAHa-N9Z99nmHIwcnUUNr0yAFtY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

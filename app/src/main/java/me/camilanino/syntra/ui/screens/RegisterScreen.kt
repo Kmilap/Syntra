@@ -32,6 +32,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.Canvas
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.foundation.text.KeyboardOptions as FKeyboardOptions
 
 /* ====== PALETA (colores consistentes con Syntra) ====== */
@@ -41,6 +42,7 @@ private val SyntraWhite  = Color(0xFFF1F2F8)
 private val SyntraGray   = Color(0xFF6C7278)
 
 /* ====== TEXT FIELD REUTILIZABLE ====== */
+
 @Composable
 private fun LabeledTextField(
     label: String,
