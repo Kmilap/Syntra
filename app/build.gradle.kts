@@ -2,7 +2,7 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
-    alias(libs.plugins.google.gms.google.services)
+    id("com.google.gms.google-services")
 }
 
 android {
@@ -60,4 +60,7 @@ dependencies {
     debugImplementation(libs.androidx.ui.test.manifest)
     implementation("androidx.compose.material3:material3:1.2.1")
     implementation("androidx.compose.material:material-icons-extended:1.6.7")
+    implementation(platform("com.google.firebase:firebase-bom:33.5.1"))
+    implementation ("com.google.firebase:firebase-firestore")
+    implementation ("com.google.firebase:firebase-storage")
 }

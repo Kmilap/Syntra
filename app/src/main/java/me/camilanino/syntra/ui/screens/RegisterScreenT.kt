@@ -7,9 +7,6 @@ import androidx.compose.material.icons.outlined.Visibility
 import androidx.compose.material.icons.outlined.VisibilityOff
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
-
-
-
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -23,7 +20,6 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.text.font.FontWeight
@@ -34,6 +30,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.Canvas
 import androidx.compose.ui.platform.LocalDensity
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FirebaseFirestore
 import androidx.compose.foundation.text.KeyboardOptions as FKeyboardOptions
 
 /* ====== PALETA (colores consistentes con Syntra) ====== */
@@ -104,12 +102,10 @@ private fun LabeledTextField(
 /* ====== HEADER CON OLA ====== */
 @Composable
 private fun HeaderWithWaveRegister(
-    title: String = "Registrarse",
-    subtitle: String = "Completa los campos para crear tu cuenta",
+    title: String = "Registrarse (Tránsito)",
+    subtitle: String = "Crea tu cuenta de agente de tránsito",
     waveHeightDp: Int = 56
 ) {
-    val waveHeightPx = with(LocalDensity.current) { waveHeightDp.dp.toPx() }
-
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -147,7 +143,6 @@ private fun HeaderWithWaveRegister(
             )
         }
 
-        // Ola inferior
         Canvas(
             modifier = Modifier
                 .fillMaxWidth()
@@ -170,16 +165,20 @@ private fun HeaderWithWaveRegister(
     }
 }
 
-/* ====== PANTALLA REGISTRO ====== */
+/* ====== PANTALLA REGISTRO (TRÁNSITO) CON FIREBASE ====== */
 @Composable
 fun RegisterScreenT(
-    onRegister: (String, String, String, String) -> Unit = { _, _, _, _ -> },
     onLoginNavigate: () -> Unit = {}
 ) {
+    val auth = FirebaseAuth.getInstance()
+    val db = FirebaseFirestore.getInstance()
+
     var email by remember { mutableStateOf("") }
-    var document by remember { mutableStateOf("") }
-    var username by remember { mutableStateOf("") }
+    var document by remember { mutableStateOf("") } // cédula
+    var plate by remember { mutableStateOf("") }    // "username" en tu UI original, pero aquí es placa
     var password by remember { mutableStateOf("") }
+    var status by remember { mutableStateOf<String?>(null) }
+    var loading by remember { mutableStateOf(false) }
 
     Column(
         modifier = Modifier
@@ -200,54 +199,91 @@ fun RegisterScreenT(
                     .fillMaxSize()
                     .padding(horizontal = 28.dp, vertical = 24.dp)
             ) {
-                // Correo
                 LabeledTextField(
                     label = "Correo Institucional",
-                    placeholder = "usuario@correo.com",
+                    placeholder = "agente@institucion.gov",
                     value = email,
                     onValueChange = { email = it },
-                    leadingIcon = { Icon(Icons.Outlined.Email, contentDescription = null, tint = SyntraGray) }
+                    leadingIcon = { Icon(Icons.Outlined.Email, contentDescription = null, tint = SyntraGray) },
+                    keyboardType = KeyboardType.Email,
+                    imeAction = ImeAction.Next
                 )
 
                 Spacer(Modifier.height(14.dp))
 
-                // Documento
                 LabeledTextField(
                     label = "Número de documento",
                     placeholder = "0000000000",
                     value = document,
                     onValueChange = { document = it },
                     leadingIcon = { Icon(Icons.Outlined.Badge, contentDescription = null, tint = SyntraGray) },
-                    keyboardType = KeyboardType.Number
+                    keyboardType = KeyboardType.Number,
+                    imeAction = ImeAction.Next
                 )
 
                 Spacer(Modifier.height(14.dp))
 
-                // Usuario
                 LabeledTextField(
                     label = "Placa",
-                    placeholder = "NúmeroPlaca",
-                    value = username,
-                    onValueChange = { username = it },
-                    leadingIcon = { Icon(Icons.Outlined.Person, contentDescription = null, tint = SyntraGray) }
+                    placeholder = "ABC123",
+                    value = plate,
+                    onValueChange = { plate = it },
+                    leadingIcon = { Icon(Icons.Outlined.Person, contentDescription = null, tint = SyntraGray) },
+                    imeAction = ImeAction.Next
                 )
 
                 Spacer(Modifier.height(14.dp))
 
-                // Contraseña
                 LabeledTextField(
                     label = "Contraseña",
                     placeholder = "••••••••",
                     value = password,
                     onValueChange = { password = it },
                     leadingIcon = { Icon(Icons.Outlined.Lock, contentDescription = null, tint = SyntraGray) },
-                    isPassword = true
+                    isPassword = true,
+                    keyboardType = KeyboardType.Password,
+                    imeAction = ImeAction.Done
                 )
 
                 Spacer(Modifier.height(26.dp))
 
                 Button(
-                    onClick = { onRegister(email, document, username, password) },
+                    onClick = {
+                        loading = true
+                        if (email.isBlank() || password.length < 6) {
+                            status = "Email o contraseña inválidos"
+                            loading = false
+                        } else {
+                            // 1) Crear cuenta de agente en Firebase Auth
+                            auth.createUserWithEmailAndPassword(email, password)
+                                .addOnSuccessListener {
+                                    val uid = auth.currentUser!!.uid
+
+                                    // 2) Guardar perfil de agente en /transito/{uid}
+                                    val agente = mapOf(
+                                        "email" to email,
+                                        "document" to document,
+                                        "placa" to plate,
+                                        "rol" to "agente",
+                                        "creado" to System.currentTimeMillis()
+                                    )
+
+                                    db.collection("transito").document(uid).set(agente)
+                                        .addOnSuccessListener {
+                                            status = "Agente registrado correctamente"
+                                            loading = false
+                                        }
+                                        .addOnFailureListener { e ->
+                                            status = "Error guardando perfil de agente: ${e.message}"
+                                            loading = false
+                                        }
+                                }
+                                .addOnFailureListener { e ->
+                                    status = "Error creando cuenta: ${e.message}"
+                                    loading = false
+                                }
+                        }
+                    },
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(52.dp),
@@ -270,6 +306,21 @@ fun RegisterScreenT(
                         color = SyntraBlue,
                         fontWeight = FontWeight.SemiBold,
                         modifier = Modifier.clickable { onLoginNavigate() }
+                    )
+                }
+
+                Spacer(Modifier.height(12.dp))
+
+                if (loading) {
+                    CircularProgressIndicator(modifier = Modifier.align(Alignment.CenterHorizontally))
+                }
+
+                status?.let {
+                    Text(
+                        text = it,
+                        color = Color.DarkGray,
+                        fontSize = 13.sp,
+                        modifier = Modifier.padding(top = 8.dp)
                     )
                 }
             }

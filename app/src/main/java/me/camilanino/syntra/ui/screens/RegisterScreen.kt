@@ -5,9 +5,6 @@ import androidx.compose.material.icons.outlined.Visibility
 import androidx.compose.material.icons.outlined.VisibilityOff
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
-
-
-
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -32,7 +29,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.Canvas
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.tooling.preview.Preview
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FirebaseFirestore
 import androidx.compose.foundation.text.KeyboardOptions as FKeyboardOptions
 
 /* ====== PALETA (colores consistentes con Syntra) ====== */
@@ -42,7 +40,6 @@ private val SyntraWhite  = Color(0xFFF1F2F8)
 private val SyntraGray   = Color(0xFF6C7278)
 
 /* ====== TEXT FIELD REUTILIZABLE ====== */
-
 @Composable
 private fun LabeledTextField(
     label: String,
@@ -108,8 +105,6 @@ private fun HeaderWithWaveRegister(
     subtitle: String = "Completa los campos para crear tu cuenta",
     waveHeightDp: Int = 56
 ) {
-    val waveHeightPx = with(LocalDensity.current) { waveHeightDp.dp.toPx() }
-
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -147,7 +142,6 @@ private fun HeaderWithWaveRegister(
             )
         }
 
-        // Ola inferior
         Canvas(
             modifier = Modifier
                 .fillMaxWidth()
@@ -170,16 +164,20 @@ private fun HeaderWithWaveRegister(
     }
 }
 
-/* ====== PANTALLA REGISTRO ====== */
+/* ====== PANTALLA REGISTRO CON FIREBASE ====== */
 @Composable
 fun RegisterScreen(
-    onRegister: (String, String, String, String) -> Unit = { _, _, _, _ -> },
     onLoginNavigate: () -> Unit = {}
 ) {
+    val auth = FirebaseAuth.getInstance()
+    val db = FirebaseFirestore.getInstance()
+
     var email by remember { mutableStateOf("") }
     var document by remember { mutableStateOf("") }
     var username by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
+    var status by remember { mutableStateOf<String?>(null) }
+    var loading by remember { mutableStateOf(false) }
 
     Column(
         modifier = Modifier
@@ -200,7 +198,6 @@ fun RegisterScreen(
                     .fillMaxSize()
                     .padding(horizontal = 28.dp, vertical = 24.dp)
             ) {
-                // Correo
                 LabeledTextField(
                     label = "Correo",
                     placeholder = "usuario@correo.com",
@@ -211,7 +208,6 @@ fun RegisterScreen(
 
                 Spacer(Modifier.height(14.dp))
 
-                // Documento
                 LabeledTextField(
                     label = "Número de documento",
                     placeholder = "0000000000",
@@ -223,7 +219,6 @@ fun RegisterScreen(
 
                 Spacer(Modifier.height(14.dp))
 
-                // Usuario
                 LabeledTextField(
                     label = "Usuario",
                     placeholder = "NombreUsuario",
@@ -234,7 +229,6 @@ fun RegisterScreen(
 
                 Spacer(Modifier.height(14.dp))
 
-                // Contraseña
                 LabeledTextField(
                     label = "Contraseña",
                     placeholder = "••••••••",
@@ -247,7 +241,42 @@ fun RegisterScreen(
                 Spacer(Modifier.height(26.dp))
 
                 Button(
-                    onClick = { onRegister(email, document, username, password) },
+                    onClick = {
+                        loading = true
+                        if (email.isBlank() || password.length < 6) {
+                            status = "Email o contraseña inválidos"
+                            loading = false
+                        } else {
+                            auth.createUserWithEmailAndPassword(email, password)
+                                .addOnSuccessListener {
+                                    val uid = auth.currentUser!!.uid
+                                    val perfil = mapOf(
+                                        "email" to email,
+                                        "document" to document,
+                                        "username" to username,
+                                        "rol" to "ciudadano",
+                                        "creado" to System.currentTimeMillis()
+                                    )
+                                    db.collection("users").document(uid).set(perfil)
+                                        .addOnSuccessListener {
+                                            status = "Usuario registrado correctamente"
+                                            loading = false
+
+
+                                            auth.signOut()          // opcional: forzar login limpio
+                                            onLoginNavigate()       // ⬅️ navega de vuelta al Login
+                                        }
+                                        .addOnFailureListener {
+                                            status = "Error guardando perfil: ${it.message}"
+                                            loading = false
+                                        }
+                                }
+                                .addOnFailureListener {
+                                    status = "Error al registrar: ${it.message}"
+                                    loading = false
+                                }
+                        }
+                    },
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(52.dp),
@@ -272,8 +301,24 @@ fun RegisterScreen(
                         modifier = Modifier.clickable { onLoginNavigate() }
                     )
                 }
+
+                Spacer(Modifier.height(12.dp))
+
+                if (loading) {
+                    CircularProgressIndicator(modifier = Modifier.align(Alignment.CenterHorizontally))
+                }
+
+                status?.let {
+                    Text(
+                        text = it,
+                        color = Color.DarkGray,
+                        fontSize = 13.sp,
+                        modifier = Modifier.padding(top = 8.dp)
+                    )
+                }
             }
         }
     }
 }
+
 

@@ -1,5 +1,6 @@
 package me.camilanino.syntra.ui.screens
 
+import android.content.Context
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -7,7 +8,6 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Email
-import androidx.compose.material.icons.outlined.LocationOn
 import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.Visibility
 import androidx.compose.material.icons.outlined.VisibilityOff
@@ -15,37 +15,33 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.foundation.Canvas
-import androidx.compose.ui.platform.LocalDensity
+import com.google.firebase.auth.FirebaseAuth
 import androidx.compose.foundation.text.KeyboardOptions as FKeyboardOptions
 
-/* ====== PALETA (tus colores) ====== */
+/* ====== Paleta ====== */
 private val SyntraBlue   = Color(0xFF4D81E7)
 private val SyntraSalmon = Color(0xD9E74C3C)
 private val SyntraWhite  = Color(0xFFF1F2F8)
 private val SyntraGray   = Color(0xFF6C7278)
 
-/* ====== TEXT FIELD REUTILIZABLE ====== */
+/* ====== TextField reutilizable ====== */
 @Composable
 private fun LabeledTextField(
     label: String,
     placeholder: String,
     value: String,
     onValueChange: (String) -> Unit,
-    leadingIcon: ImageVector,
+    leadingIcon: @Composable (() -> Unit),
     isPassword: Boolean = false,
     keyboardType: KeyboardType = KeyboardType.Text,
     imeAction: ImeAction = ImeAction.Next
@@ -63,11 +59,11 @@ private fun LabeledTextField(
             value = value,
             onValueChange = onValueChange,
             singleLine = true,
-            leadingIcon = { Icon(leadingIcon, contentDescription = null, tint = SyntraGray) },
+            leadingIcon = leadingIcon,
             placeholder = { Text(placeholder, color = SyntraGray.copy(alpha = 0.7f)) },
             colors = OutlinedTextFieldDefaults.colors(
                 focusedBorderColor = SyntraBlue,
-                unfocusedBorderColor = SyntraWhite.copy(alpha = 0f),
+                unfocusedBorderColor = Color.Transparent,
                 focusedContainerColor = Color.White,
                 unfocusedContainerColor = Color.White,
                 cursorColor = SyntraBlue
@@ -82,8 +78,10 @@ private fun LabeledTextField(
             ),
             trailingIcon = {
                 if (isPassword) {
-                    val icon = if (passwordVisible) Icons.Outlined.VisibilityOff else Icons.Outlined.Visibility
-                    val desc = if (passwordVisible) "Ocultar contraseña" else "Mostrar contraseña"
+                    val icon = if (passwordVisible)
+                        Icons.Outlined.VisibilityOff else Icons.Outlined.Visibility
+                    val desc = if (passwordVisible)
+                        "Ocultar contraseña" else "Mostrar contraseña"
                     IconButton(onClick = { passwordVisible = !passwordVisible }) {
                         Icon(icon, contentDescription = desc, tint = SyntraGray)
                     }
@@ -95,141 +93,112 @@ private fun LabeledTextField(
     }
 }
 
-/* ====== HEADER CON OLA ====== */
+/* ====== Header simple ====== */
 @Composable
-private fun HeaderWithWave(
-    title: String,
-    subtitle: String,
-    waveHeightDp: Int = 56
+private fun LoginHeader(
+    title: String = "Ingresa en tu cuenta",
+    subtitle: String = "Introduce tu email y contraseña para iniciar sesión"
 ) {
-    val waveHeightPx = with(LocalDensity.current) { waveHeightDp.dp.toPx() }
-
-    Box(
+    Column(
         modifier = Modifier
             .fillMaxWidth()
             .background(SyntraSalmon)
-            .wrapContentHeight(),
-        contentAlignment = Alignment.Center
+            .padding(top = 80.dp, bottom = 40.dp, start = 24.dp, end = 24.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        // Contenido del header
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(top = 80.dp, bottom = 100.dp, start = 24.dp, end = 24.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Icon(
-                imageVector = Icons.Outlined.LocationOn,
-                contentDescription = null,
-                tint = Color.White,
-                modifier = Modifier.size(48.dp)
-            )
-            Spacer(Modifier.height(12.dp))
-            Text(
-                text = title,
-                color = Color.White,
-                fontSize = 28.sp,
-                fontWeight = FontWeight.ExtraBold,
-                lineHeight = 32.sp,
-                textAlign = TextAlign.Center
-            )
-            Spacer(Modifier.height(6.dp))
-            Text(
-                text = subtitle,
-                color = Color.White.copy(alpha = 0.9f),
-                fontSize = 13.sp,
-                textAlign = TextAlign.Center
-            )
-        }
-
-        // OLA: dibujada al fondo, pegada a la parte inferior del header
-        Canvas(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(waveHeightDp.dp)
-                .align(Alignment.BottomCenter)
-        ) {
-            val width = size.width
-            val height = size.height
-
-            val path = Path().apply {
-                moveTo(0f, 0f)
-                // Curva suave tipo seno. Ajusta control points para variar la ola.
-                quadraticBezierTo(
-                    width * 0.25f, height * 0.9f,
-                    width * 0.5f, height * 0.6f
-                )
-                quadraticBezierTo(
-                    width * 0.75f, height * 0.3f,
-                    width * 1.0f, height * 0.8f
-                )
-                lineTo(width, height)
-                lineTo(0f, height)
-                close()
-            }
-            drawPath(path = path, color = SyntraSalmon)
-        }
+        Text(
+            text = title,
+            color = Color.White,
+            fontSize = 28.sp,
+            fontWeight = FontWeight.ExtraBold,
+            lineHeight = 32.sp,
+            textAlign = TextAlign.Center
+        )
+        Spacer(Modifier.height(6.dp))
+        Text(
+            text = subtitle,
+            color = Color.White.copy(alpha = 0.9f),
+            fontSize = 13.sp,
+            textAlign = TextAlign.Center
+        )
     }
 }
 
-/* ====== PANTALLA LOGIN A PANTALLA COMPLETA ====== */
+/* ====== Pantalla Login con Firebase (auto-skip si hay sesión) ====== */
 @Composable
 fun LoginScreen(
-    onLogin: (String, String, Boolean) -> Unit = { _, _, _ -> },
-    onForgotPassword: () -> Unit = {},
-    onRegister: () -> Unit = {}
+    onRegisterClick: (() -> Unit)? = null,
+    onForgotPassword: ((String) -> Unit)? = null,
+    onLoginSuccess: (() -> Unit)? = null
 ) {
-    var user by remember { mutableStateOf("") }
+    val auth = remember { FirebaseAuth.getInstance() }
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val prefs = remember { context.getSharedPreferences("auth_prefs", Context.MODE_PRIVATE) }
+
+    var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var rememberMe by remember { mutableStateOf(false) }
+    var status by remember { mutableStateOf<String?>(null) }
+    var loading by remember { mutableStateOf(false) }
+
+    // --- NUEVO: chequeo de sesión persistida ---
+    var isChecking by remember { mutableStateOf(true) }
+    LaunchedEffect(Unit) {
+        val current = auth.currentUser
+        if (current != null) {
+            // Ya hay sesión -> entra directo
+            onLoginSuccess?.invoke()
+        } else {
+            isChecking = false
+        }
+    }
+
+    if (isChecking) {
+        // Loader breve mientras se verifica la sesión persistida
+        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            CircularProgressIndicator(color = SyntraBlue)
+        }
+        return
+    }
 
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(SyntraWhite) // Fondo general
+            .background(SyntraWhite)
     ) {
-        // Header con ola
-        HeaderWithWave(
-            title = "Ingresa en tu cuenta",
-            subtitle = "Introduce tu email y contraseña para iniciar sesión",
-            waveHeightDp = 64
-        )
+        LoginHeader()
 
-        // Cuerpo blanco (resto de la pantalla)
         Surface(
             modifier = Modifier
                 .fillMaxWidth()
-                .weight(0.6f), // mantiene 40% header, 60% cuerpo
+                .weight(1f),
             shape = RoundedCornerShape(topStart = 40.dp, topEnd = 150.dp),
             color = SyntraWhite,
-            tonalElevation = 2.dp // le da un leve realce
+            tonalElevation = 2.dp
         ) {
             Column(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(horizontal = 28.dp, vertical = 24.dp)
             ) {
-                // Usuario (elige Email o Text según tu caso)
                 LabeledTextField(
-                    label = "Usuario",
+                    label = "Correo",
                     placeholder = "usuario@correo.com",
-                    value = user,
-                    onValueChange = { user = it },
-                    leadingIcon = Icons.Outlined.Email,
-                    isPassword = false,
+                    value = email,
+                    onValueChange = { email = it },
+                    leadingIcon = { Icon(Icons.Outlined.Email, contentDescription = null, tint = SyntraGray) },
                     keyboardType = KeyboardType.Email,
                     imeAction = ImeAction.Next
                 )
 
                 Spacer(Modifier.height(14.dp))
 
-                // Contraseña
                 LabeledTextField(
                     label = "Contraseña",
                     placeholder = "••••••••",
                     value = password,
                     onValueChange = { password = it },
-                    leadingIcon = Icons.Outlined.Lock,
+                    leadingIcon = { Icon(Icons.Outlined.Lock, contentDescription = null, tint = SyntraGray) },
                     isPassword = true,
                     keyboardType = KeyboardType.Password,
                     imeAction = ImeAction.Done
@@ -245,18 +214,40 @@ fun LoginScreen(
                     )
                     Text("Acuérdate de mí", color = SyntraGray, modifier = Modifier.weight(1f))
                     Text(
-                        "¿Has olvidado tu contraseña?",
+                        "¿Olvidaste tu contraseña?",
                         color = SyntraBlue,
                         fontWeight = FontWeight.SemiBold,
                         fontSize = 13.sp,
-                        modifier = Modifier.clickable { onForgotPassword() }
+                        modifier = Modifier.clickable {
+                            onForgotPassword?.invoke(email)
+                        }
                     )
                 }
 
                 Spacer(Modifier.height(20.dp))
 
                 Button(
-                    onClick = { onLogin(user.trim(), password, rememberMe) },
+                    onClick = {
+                        loading = true
+                        if (email.isBlank() || password.length < 6) {
+                            status = "Correo o contraseña inválidos"
+                            loading = false
+                        } else {
+                            auth.signInWithEmailAndPassword(email, password)
+                                .addOnSuccessListener {
+                                    // Guarda el estado del checkbox aquí
+                                    prefs.edit().putBoolean("remember_me", rememberMe).apply()
+
+                                    status = "Inicio de sesión correcto"
+                                    loading = false
+                                    onLoginSuccess?.invoke()
+                                }
+                                .addOnFailureListener { e ->
+                                    status = "No se pudo iniciar sesión: ${e.message}"
+                                    loading = false
+                                }
+                        }
+                    },
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(52.dp),
@@ -264,7 +255,7 @@ fun LoginScreen(
                     shape = RoundedCornerShape(14.dp),
                     border = BorderStroke(1.dp, SyntraBlue)
                 ) {
-                    Text("Ingresa", color = Color.White, fontWeight = FontWeight.SemiBold)
+                    Text("Ingresar", color = Color.White, fontWeight = FontWeight.SemiBold)
                 }
 
                 Spacer(Modifier.height(16.dp))
@@ -272,10 +263,25 @@ fun LoginScreen(
                 Row(horizontalArrangement = Arrangement.Center, modifier = Modifier.fillMaxWidth()) {
                     Text("¿No tienes una cuenta? ", color = SyntraGray)
                     Text(
-                        "registrarse",
+                        "Registrarse",
                         color = SyntraBlue,
                         fontWeight = FontWeight.SemiBold,
-                        modifier = Modifier.clickable { onRegister() }
+                        modifier = Modifier.clickable { onRegisterClick?.invoke() }
+                    )
+                }
+
+                Spacer(Modifier.height(12.dp))
+
+                if (loading) {
+                    CircularProgressIndicator(modifier = Modifier.align(Alignment.CenterHorizontally))
+                }
+
+                status?.let {
+                    Text(
+                        text = it,
+                        color = Color.DarkGray,
+                        fontSize = 13.sp,
+                        modifier = Modifier.padding(top = 8.dp)
                     )
                 }
             }

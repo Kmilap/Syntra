@@ -17,24 +17,24 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.Canvas
-import androidx.compose.ui.platform.LocalDensity
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FirebaseFirestore
 import androidx.compose.foundation.text.KeyboardOptions as FKeyboardOptions
 
-/* ====== PALETA (tus colores) ====== */
+/* ====== PALETA ====== */
 private val SyntraBlue   = Color(0xFF4D81E7)
 private val SyntraSalmon = Color(0xD9E74C3C)
 private val SyntraWhite  = Color(0xFFF1F2F8)
@@ -104,8 +104,6 @@ private fun HeaderWithWave(
     subtitle: String,
     waveHeightDp: Int = 56
 ) {
-    val waveHeightPx = with(LocalDensity.current) { waveHeightDp.dp.toPx() }
-
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -113,7 +111,6 @@ private fun HeaderWithWave(
             .wrapContentHeight(),
         contentAlignment = Alignment.Center
     ) {
-        // Contenido del header
         Column(
             modifier = Modifier
                 .fillMaxWidth()
@@ -144,7 +141,6 @@ private fun HeaderWithWave(
             )
         }
 
-        // OLA: dibujada al fondo, pegada a la parte inferior del header
         Canvas(
             modifier = Modifier
                 .fillMaxWidth()
@@ -156,15 +152,8 @@ private fun HeaderWithWave(
 
             val path = Path().apply {
                 moveTo(0f, 0f)
-                // Curva suave tipo seno. Ajusta control points para variar la ola.
-                quadraticBezierTo(
-                    width * 0.25f, height * 0.9f,
-                    width * 0.5f, height * 0.6f
-                )
-                quadraticBezierTo(
-                    width * 0.75f, height * 0.3f,
-                    width * 1.0f, height * 0.8f
-                )
+                quadraticBezierTo(width * 0.25f, height * 0.9f, width * 0.5f, height * 0.6f)
+                quadraticBezierTo(width * 0.75f, height * 0.3f, width * 1.0f, height * 0.8f)
                 lineTo(width, height)
                 lineTo(0f, height)
                 close()
@@ -174,49 +163,79 @@ private fun HeaderWithWave(
     }
 }
 
-/* ====== PANTALLA LOGIN A PANTALLA COMPLETA ====== */
+/* ====== LOGIN DE TRÁNSITO CON SESIÓN PERSISTENTE ====== */
 @Composable
 fun LoginScreenT(
-    onLogin: (String, String, Boolean) -> Unit = { _, _, _ -> },
-    onForgotPassword: () -> Unit = {},
-    onRegister: () -> Unit = {}
+    onForgotPassword: (String) -> Unit = {},
+    onRegister: () -> Unit = {},
+    onLoginSuccess: ((agentDoc: Map<String, Any?>) -> Unit)? = null
 ) {
-    var user by remember { mutableStateOf("") }
+    val auth = FirebaseAuth.getInstance()
+    val db = FirebaseFirestore.getInstance()
+
+    var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var rememberMe by remember { mutableStateOf(false) }
+    var status by remember { mutableStateOf<String?>(null) }
+    var loading by remember { mutableStateOf(false) }
+
+    // 🔸 Chequeo de sesión persistente
+    var isChecking by remember { mutableStateOf(true) }
+    LaunchedEffect(Unit) {
+        val current = auth.currentUser
+        if (current != null) {
+            val uid = current.uid
+            db.collection("transito").document(uid).get()
+                .addOnSuccessListener { doc ->
+                    if (doc.exists()) {
+                        onLoginSuccess?.invoke(doc.data ?: emptyMap())
+                    } else {
+                        auth.signOut() // no pertenece a tránsito
+                        isChecking = false
+                    }
+                }
+                .addOnFailureListener { isChecking = false }
+        } else {
+            isChecking = false
+        }
+    }
+
+    if (isChecking) {
+        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            CircularProgressIndicator(color = SyntraBlue)
+        }
+        return
+    }
 
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(SyntraWhite) // Fondo general
+            .background(SyntraWhite)
     ) {
-        // Header con ola
         HeaderWithWave(
-            title = "Ingresa en tu cuenta",
-            subtitle = "Introduce tu email y contraseña para iniciar sesión",
+            title = "Ingreso Agentes de Tránsito",
+            subtitle = "Usa tu correo institucional y contraseña",
             waveHeightDp = 64
         )
 
-        // Cuerpo blanco (resto de la pantalla)
         Surface(
             modifier = Modifier
                 .fillMaxWidth()
-                .weight(0.6f), // mantiene 40% header, 60% cuerpo
+                .weight(0.6f),
             shape = RoundedCornerShape(topStart = 40.dp, topEnd = 150.dp),
             color = SyntraWhite,
-            tonalElevation = 2.dp // le da un leve realce
+            tonalElevation = 2.dp
         ) {
             Column(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(horizontal = 28.dp, vertical = 24.dp)
             ) {
-                // Usuario (elige Email o Text según tu caso)
                 LabeledTextField(
-                    label = "Placa",
-                    placeholder = "usuario@correo.com",
-                    value = user,
-                    onValueChange = { user = it },
+                    label = "Correo institucional",
+                    placeholder = "agente@institucion.gov",
+                    value = email,
+                    onValueChange = { email = it },
                     leadingIcon = Icons.Outlined.Email,
                     isPassword = false,
                     keyboardType = KeyboardType.Email,
@@ -225,7 +244,6 @@ fun LoginScreenT(
 
                 Spacer(Modifier.height(14.dp))
 
-                // Contraseña
                 LabeledTextField(
                     label = "Contraseña",
                     placeholder = "••••••••",
@@ -251,14 +269,44 @@ fun LoginScreenT(
                         color = SyntraBlue,
                         fontWeight = FontWeight.SemiBold,
                         fontSize = 13.sp,
-                        modifier = Modifier.clickable { onForgotPassword() }
+                        modifier = Modifier.clickable { onForgotPassword(email) }
                     )
                 }
 
                 Spacer(Modifier.height(20.dp))
 
                 Button(
-                    onClick = { onLogin(user.trim(), password, rememberMe) },
+                    onClick = {
+                        loading = true
+                        if (email.isBlank() || password.length < 6) {
+                            status = "Correo o contraseña inválidos"
+                            loading = false
+                        } else {
+                            auth.signInWithEmailAndPassword(email, password)
+                                .addOnSuccessListener {
+                                    val uid = auth.currentUser!!.uid
+                                    db.collection("transito").document(uid).get()
+                                        .addOnSuccessListener { doc ->
+                                            if (doc.exists()) {
+                                                status = "Ingreso correcto"
+                                                loading = false
+                                                onLoginSuccess?.invoke(doc.data ?: emptyMap())
+                                            } else {
+                                                status = "Tu cuenta no está habilitada como agente"
+                                                loading = false
+                                            }
+                                        }
+                                        .addOnFailureListener { e ->
+                                            status = "Error verificando perfil: ${e.message}"
+                                            loading = false
+                                        }
+                                }
+                                .addOnFailureListener { e ->
+                                    status = "No se pudo iniciar sesión: ${e.message}"
+                                    loading = false
+                                }
+                        }
+                    },
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(52.dp),
@@ -266,7 +314,7 @@ fun LoginScreenT(
                     shape = RoundedCornerShape(14.dp),
                     border = BorderStroke(1.dp, SyntraBlue)
                 ) {
-                    Text("Ingresa", color = Color.White, fontWeight = FontWeight.SemiBold)
+                    Text("Ingresar", color = Color.White, fontWeight = FontWeight.SemiBold)
                 }
 
                 Spacer(Modifier.height(16.dp))
@@ -278,6 +326,21 @@ fun LoginScreenT(
                         color = SyntraBlue,
                         fontWeight = FontWeight.SemiBold,
                         modifier = Modifier.clickable { onRegister() }
+                    )
+                }
+
+                Spacer(Modifier.height(12.dp))
+
+                if (loading) {
+                    CircularProgressIndicator(modifier = Modifier.align(Alignment.CenterHorizontally))
+                }
+
+                status?.let {
+                    Text(
+                        text = it,
+                        color = Color.DarkGray,
+                        fontSize = 13.sp,
+                        modifier = Modifier.padding(top = 8.dp)
                     )
                 }
             }

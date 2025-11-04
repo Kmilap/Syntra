@@ -24,6 +24,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FirebaseFirestore
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.tasks.await
 
 /* ====== PALETA (misma que tu registro) ====== */
 private val SyntraBlue   = Color(0xFF4D81E7)
@@ -89,7 +93,7 @@ private fun LabeledTextField(
     }
 }
 
-/* ====== Avatar simple (fallback icon) ====== */
+/* ====== Avatar simple ====== */
 @Composable
 private fun ProfileAvatar() {
     Box(
@@ -115,6 +119,8 @@ private fun ProfileAvatar() {
         }
     }
 }
+
+/* ====== Header ====== */
 @Composable
 private fun BigHeader(
     title: String = "Perfil",
@@ -126,7 +132,6 @@ private fun BigHeader(
             .height(220.dp)
             .background(SyntraSalmon)
     ) {
-        // Flecha de retroceso
         if (onBack != null) {
             IconButton(
                 onClick = onBack,
@@ -143,7 +148,6 @@ private fun BigHeader(
             }
         }
 
-        // Título centrado
         Text(
             text = title,
             color = Color.White,
@@ -154,7 +158,6 @@ private fun BigHeader(
                 .padding(top = 70.dp)
         )
 
-        // Ola inferior
         Canvas(
             modifier = Modifier
                 .fillMaxWidth()
@@ -176,39 +179,64 @@ private fun BigHeader(
     }
 }
 
-
-/* ====== Pantalla Perfil (todo en un solo Box) ====== */
+/* ====== Pantalla de Perfil conectada a Firebase ====== */
 @Composable
-fun ProfileScreen(
-    initialName: String = "Juan Diego Niño Solano",
-    initialUsername: String = "jnino825",
-    initialEmail: String = "jnino825@unab.edu.co",
-    initialDocument: String = "1235 6478 990",
+fun ProfileScreenFirebase(
     onForgotPassword: () -> Unit = {},
-    onUpdate: (String, String, String) -> Unit = { _, _, _ -> },
-    onSave: (String, String, String) -> Unit = { _, _, _ -> },
     onLogout: () -> Unit = {}
 ) {
-    var name by remember { mutableStateOf(initialName) }
-    var username by remember { mutableStateOf(initialUsername) }
-    var email by remember { mutableStateOf(initialEmail) }
-    var document by remember { mutableStateOf(initialDocument) }
+    val auth = FirebaseAuth.getInstance()
+    val db = FirebaseFirestore.getInstance()
+    val uid = auth.currentUser?.uid
+    val scope = rememberCoroutineScope()
 
+    var name by remember { mutableStateOf("") }
+    var username by remember { mutableStateOf("") }
+    var email by remember { mutableStateOf("") }
+    var document by remember { mutableStateOf("") }
+    var loading by remember { mutableStateOf(true) }
+    var message by remember { mutableStateOf<String?>(null) }
+
+    // 🔹 Cargar datos del usuario
+    LaunchedEffect(Unit) {
+        if (uid != null) {
+            try {
+                val snap = db.collection("users").document(uid).get().await()
+                username = snap.getString("username") ?: ""
+                name = snap.getString("username") ?: ""
+                email = snap.getString("email") ?: auth.currentUser?.email.orEmpty()
+                document = snap.getString("document") ?: ""
+            } catch (e: Exception) {
+                message = "Error al cargar perfil: ${e.message}"
+            } finally {
+                loading = false
+            }
+        } else {
+            message = "No hay sesión activa"
+            loading = false
+        }
+    }
+
+    if (loading) {
+        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            CircularProgressIndicator(color = SyntraBlue)
+        }
+        return
+    }
+
+    // 🔹 Interfaz principal (tu diseño original)
     Box(
         modifier = Modifier
             .fillMaxSize()
             .background(SyntraWhite)
     ) {
-        // Header grande
-        BigHeader("Perfil", onBack = { /* navController.popBackStack() */ })
+        BigHeader("Perfil")
 
-        // Cuerpo principal (sin cards anidadas)
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(top = 150.dp, start = 20.dp, end = 20.dp, bottom = 20.dp)
         ) {
-            // Avatar + nombre
             Column(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalAlignment = Alignment.CenterHorizontally
@@ -216,7 +244,7 @@ fun ProfileScreen(
                 ProfileAvatar()
                 Spacer(Modifier.height(10.dp))
                 Text(
-                    text = name,
+                    text = if (name.isNotEmpty()) name else "Usuario",
                     fontSize = 18.sp,
                     fontWeight = FontWeight.Bold,
                     color = Color(0xFF2E2E2E)
@@ -225,7 +253,6 @@ fun ProfileScreen(
 
             Spacer(Modifier.height(18.dp))
 
-            // Campos (directo, sin caja extra)
             LabeledTextField(
                 label = "Usuario",
                 placeholder = "usuario",
@@ -257,16 +284,15 @@ fun ProfileScreen(
 
             Spacer(Modifier.height(18.dp))
 
-            // Botones principales
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 OutlinedButton(
-                    onClick = { onUpdate(username, email, document) },
-                    modifier = Modifier
-                        .weight(1f)
-                        .height(48.dp),
+                    onClick = {
+                        message = "Datos listos para actualizar."
+                    },
+                    modifier = Modifier.weight(1f).height(48.dp),
                     shape = RoundedCornerShape(14.dp),
                     colors = ButtonDefaults.outlinedButtonColors(contentColor = SyntraSalmon),
                     border = BorderStroke(1.dp, SyntraSalmon)
@@ -275,10 +301,26 @@ fun ProfileScreen(
                 }
 
                 Button(
-                    onClick = { onSave(username, email, document) },
-                    modifier = Modifier
-                        .weight(1f)
-                        .height(48.dp),
+                    onClick = {
+                        if (uid == null) {
+                            message = "No hay sesión activa."
+                            return@Button
+                        }
+                        scope.launch {
+                            try {
+                                val data = mapOf(
+                                    "username" to username,
+                                    "email" to email,
+                                    "document" to document
+                                )
+                                db.collection("users").document(uid).set(data).await()
+                                message = "Perfil guardado correctamente."
+                            } catch (e: Exception) {
+                                message = "Error al guardar: ${e.message}"
+                            }
+                        }
+                    },
+                    modifier = Modifier.weight(1f).height(48.dp),
                     shape = RoundedCornerShape(14.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = SyntraSalmon)
                 ) {
@@ -288,9 +330,8 @@ fun ProfileScreen(
 
             Spacer(Modifier.height(10.dp))
 
-            // Link
             Text(
-                text = "¿Has olvidado tu contraseña ?",
+                text = "¿Has olvidado tu contraseña?",
                 color = SyntraBlue,
                 fontSize = 13.sp,
                 modifier = Modifier
@@ -301,16 +342,21 @@ fun ProfileScreen(
 
             Spacer(Modifier.height(18.dp))
 
-            // Cerrar sesión
             Button(
-                onClick = onLogout,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(52.dp),
+                onClick = {
+                    auth.signOut()
+                    onLogout()
+                },
+                modifier = Modifier.fillMaxWidth().height(52.dp),
                 shape = RoundedCornerShape(26.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = SyntraBlue)
             ) {
                 Text("Cerrar sesión", color = Color.White, fontWeight = FontWeight.SemiBold)
+            }
+
+            message?.let {
+                Spacer(Modifier.height(10.dp))
+                Text(it, color = if (it.contains("Error")) Color(0xFFB00020) else Color(0xFF008000))
             }
         }
     }

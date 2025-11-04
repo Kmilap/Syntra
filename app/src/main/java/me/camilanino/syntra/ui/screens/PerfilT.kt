@@ -19,19 +19,23 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.input.PasswordVisualTransformation
-import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FirebaseFirestore
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.tasks.await
 
-/* ========== PALETA (igual a la otra pantalla) ========== */
+/* ====== PALETA ====== */
 private val SyntraBlue   = Color(0xFF4D81E7)
 private val SyntraSalmon = Color(0xD9E74C3C)
 private val SyntraWhite  = Color(0xFFF1F2F8)
 private val SyntraGray   = Color(0xFF6C7278)
 
-/* ========== TextField reutilizable ========== */
+/* ====== TextField reutilizable ====== */
 @Composable
 private fun LabeledTextField(
     label: String,
@@ -39,12 +43,10 @@ private fun LabeledTextField(
     value: String,
     onValueChange: (String) -> Unit,
     leadingIcon: @Composable (() -> Unit),
-    isPassword: Boolean = false,
+    enabled: Boolean = true,
     keyboardType: KeyboardType = KeyboardType.Text,
     imeAction: ImeAction = ImeAction.Next
 ) {
-    var passwordVisible by remember { mutableStateOf(false) }
-
     Column(Modifier.fillMaxWidth()) {
         Text(
             text = label,
@@ -57,6 +59,7 @@ private fun LabeledTextField(
             value = value,
             onValueChange = onValueChange,
             singleLine = true,
+            enabled = enabled,
             leadingIcon = leadingIcon,
             placeholder = { Text(placeholder, color = SyntraGray.copy(alpha = 0.7f)) },
             colors = OutlinedTextFieldDefaults.colors(
@@ -64,6 +67,7 @@ private fun LabeledTextField(
                 unfocusedBorderColor = Color.Transparent,
                 focusedContainerColor = Color.White,
                 unfocusedContainerColor = Color.White,
+                disabledContainerColor = Color(0xFFF5F5F5),
                 cursorColor = SyntraBlue
             ),
             shape = RoundedCornerShape(12.dp),
@@ -71,28 +75,44 @@ private fun LabeledTextField(
                 .fillMaxWidth()
                 .height(52.dp),
             keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
-                keyboardType = if (isPassword) KeyboardType.Password else keyboardType,
+                keyboardType = keyboardType,
                 imeAction = imeAction
-            ),
-            trailingIcon = {
-                if (isPassword) {
-                    val icon = if (passwordVisible) Icons.Outlined.VisibilityOff else Icons.Outlined.Visibility
-                    val desc = if (passwordVisible) "Ocultar" else "Mostrar"
-                    IconButton(onClick = { passwordVisible = !passwordVisible }) {
-                        Icon(icon, contentDescription = desc, tint = SyntraGray)
-                    }
-                }
-            },
-            visualTransformation = if (isPassword && !passwordVisible)
-                PasswordVisualTransformation() else VisualTransformation.None
+            )
         )
     }
 }
 
-/* ========== Header alto con flecha y ola ========== */
+/* ====== Avatar ====== */
+@Composable
+private fun ProfileAvatar() {
+    Box(
+        modifier = Modifier
+            .size(112.dp)
+            .clip(CircleShape)
+            .background(Color.White),
+        contentAlignment = Alignment.Center
+    ) {
+        Box(
+            modifier = Modifier
+                .size(104.dp)
+                .clip(CircleShape)
+                .background(Color(0xFFEDEDEF)),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = Icons.Outlined.Badge,
+                contentDescription = null,
+                tint = SyntraGray,
+                modifier = Modifier.size(56.dp)
+            )
+        }
+    }
+}
+
+/* ====== Header ====== */
 @Composable
 private fun BigHeader(
-    title: String,
+    title: String = "Perfil tránsito",
     onBack: (() -> Unit)? = null
 ) {
     Box(
@@ -108,9 +128,15 @@ private fun BigHeader(
                     .align(Alignment.TopStart)
                     .padding(top = 16.dp, start = 8.dp)
             ) {
-                Icon(Icons.Outlined.ArrowBack, contentDescription = "Volver", tint = Color.White)
+                Icon(
+                    imageVector = Icons.Outlined.ArrowBack,
+                    contentDescription = "Volver",
+                    tint = Color.White,
+                    modifier = Modifier.size(28.dp)
+                )
             }
         }
+
         Text(
             text = title,
             color = Color.White,
@@ -120,6 +146,7 @@ private fun BigHeader(
                 .align(Alignment.TopCenter)
                 .padding(top = 70.dp)
         )
+
         Canvas(
             modifier = Modifier
                 .fillMaxWidth()
@@ -132,96 +159,105 @@ private fun BigHeader(
                 moveTo(0f, 0f)
                 quadraticBezierTo(w * 0.25f, h * 1.1f, w * 0.5f, h * 0.7f)
                 quadraticBezierTo(w * 0.75f, h * 0.3f, w, h * 0.9f)
-                lineTo(w, h); lineTo(0f, h); close()
+                lineTo(w, h)
+                lineTo(0f, h)
+                close()
             }
             drawPath(path, SyntraSalmon)
         }
     }
 }
 
-/* ========== Avatar (placeholder). Reemplaza por tu imagen si aplica ========== */
-@Composable private fun TransitAvatar() {
-    Box(
-        modifier = Modifier
-            .size(112.dp)
-            .clip(CircleShape)
-            .background(Color.White),
-        contentAlignment = Alignment.Center
-    ) {
-        Box(
-            modifier = Modifier
-                .size(104.dp)
-                .clip(CircleShape)
-                .background(Color(0xFFEDEDEF)),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(Icons.Outlined.Badge, contentDescription = null, tint = SyntraGray, modifier = Modifier.size(48.dp))
-        }
-    }
-}
-
-/* ========== Pantalla Tránsito (misma estructura visual) ========== */
+/* ====== PERFIL DE TRÁNSITO CON FIREBASE ====== */
 @Composable
-fun TransitScreen(
-    initialName: String = "Julián Lizcano Manrique",
-    initialUsername: String = "jnino825",
-    initialPlateMasked: String = "************",
-    initialDocument: String = "1235 6478 990",
-    onBack: () -> Unit = {},
-    onUpdate: (String, String, String) -> Unit = { _, _, _ -> },
-    onSave: (String, String, String) -> Unit = { _, _, _ -> },
-    onConsultComparendos: () -> Unit = {},
+fun ProfileScreenTransito(
+    onForgotPassword: () -> Unit = {},
     onLogout: () -> Unit = {}
 ) {
-    var name by remember { mutableStateOf(initialName) }
-    var username by remember { mutableStateOf(initialUsername) }
-    var plate by remember { mutableStateOf(initialPlateMasked) }
-    var document by remember { mutableStateOf(initialDocument) }
+    val auth = FirebaseAuth.getInstance()
+    val db = FirebaseFirestore.getInstance()
+    val uid = auth.currentUser?.uid
+    val scope = rememberCoroutineScope()
+
+    var placa by remember { mutableStateOf("") }
+    var email by remember { mutableStateOf("") }
+    var document by remember { mutableStateOf("") }
+    var loading by remember { mutableStateOf(true) }
+    var message by remember { mutableStateOf<String?>(null) }
+
+    // 🔹 Cargar perfil desde Firestore
+    LaunchedEffect(Unit) {
+        if (uid == null) {
+            message = "No hay sesión activa"
+            loading = false
+            return@LaunchedEffect
+        }
+        try {
+            val snap = db.collection("transito").document(uid).get().await()
+            placa = snap.getString("placa") ?: snap.getString("username") ?: ""
+            email = snap.getString("email") ?: auth.currentUser?.email.orEmpty()
+            document = snap.getString("document") ?: ""
+        } catch (e: Exception) {
+            message = "Error al cargar perfil: ${e.message}"
+        } finally {
+            loading = false
+        }
+    }
+
+    if (loading) {
+        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            CircularProgressIndicator(color = SyntraBlue)
+        }
+        return
+    }
 
     Box(
         modifier = Modifier
             .fillMaxSize()
             .background(SyntraWhite)
     ) {
-        BigHeader(title = "Tránsito", onBack = onBack)
+        BigHeader("Perfil tránsito")
 
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(top = 150.dp, start = 20.dp, end = 20.dp, bottom = 20.dp)
         ) {
-            // Avatar + título sección
             Column(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                TransitAvatar()
+                ProfileAvatar()
                 Spacer(Modifier.height(10.dp))
-                Text(text = name, fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Color(0xFF2E2E2E))
+                Text(
+                    text = if (placa.isNotEmpty()) placa else "Agente",
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color(0xFF2E2E2E)
+                )
             }
 
             Spacer(Modifier.height(18.dp))
 
-            // Usuario
+            // Campo placa
             LabeledTextField(
-                label = "Usuario",
-                placeholder = "usuario",
-                value = username,
-                onValueChange = { username = it },
-                leadingIcon = { Icon(Icons.Outlined.Person, contentDescription = null, tint = SyntraGray) }
+                label = "Usuario (placa)",
+                placeholder = "ABC123",
+                value = placa,
+                onValueChange = { placa = it.uppercase() },
+                leadingIcon = { Icon(Icons.Outlined.Badge, contentDescription = null, tint = SyntraGray) }
             )
 
             Spacer(Modifier.height(14.dp))
 
-            // Placa (oculta/visible)
+            // Correo (solo lectura)
             LabeledTextField(
-                label = "Código de placa",
-                placeholder = "ABC123",
-                value = plate,
-                onValueChange = { plate = it },
-                leadingIcon = { Icon(Icons.Outlined.DirectionsCar, contentDescription = null, tint = SyntraGray) },
-                isPassword = true,                 // comportamiento de mostrar/ocultar
-                keyboardType = KeyboardType.Ascii  // evita autocorrección
+                label = "Correo institucional",
+                placeholder = "agente@institucion.gov",
+                value = email,
+                onValueChange = { },
+                leadingIcon = { Icon(Icons.Outlined.Email, contentDescription = null, tint = SyntraGray) },
+                enabled = false
             )
 
             Spacer(Modifier.height(14.dp))
@@ -232,59 +268,85 @@ fun TransitScreen(
                 placeholder = "0000 0000 000",
                 value = document,
                 onValueChange = { document = it },
-                leadingIcon = { Icon(Icons.Outlined.Badge, contentDescription = null, tint = SyntraGray) },
+                leadingIcon = { Icon(Icons.Outlined.AssignmentInd, contentDescription = null, tint = SyntraGray) },
                 keyboardType = KeyboardType.Number,
                 imeAction = ImeAction.Done
             )
 
             Spacer(Modifier.height(18.dp))
 
-            // Botones
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 OutlinedButton(
-                    onClick = { onUpdate(username, plate, document) },
+                    onClick = { message = "Datos listos para actualizar." },
                     modifier = Modifier.weight(1f).height(48.dp),
                     shape = RoundedCornerShape(14.dp),
                     colors = ButtonDefaults.outlinedButtonColors(contentColor = SyntraSalmon),
                     border = BorderStroke(1.dp, SyntraSalmon)
-                ) { Text("Actualizar", fontWeight = FontWeight.SemiBold) }
+                ) {
+                    Text("Actualizar", fontWeight = FontWeight.SemiBold)
+                }
 
                 Button(
-                    onClick = { onSave(username, plate, document) },
+                    onClick = {
+                        if (uid == null) {
+                            message = "No hay sesión activa."
+                            return@Button
+                        }
+                        scope.launch {
+                            try {
+                                val data = mapOf(
+                                    "placa" to placa,
+                                    "email" to email,
+                                    "document" to document,
+                                    "rol" to "agente"
+                                )
+                                db.collection("transito").document(uid).set(data).await()
+                                message = "Perfil de tránsito guardado."
+                            } catch (e: Exception) {
+                                message = "Error al guardar: ${e.message}"
+                            }
+                        }
+                    },
                     modifier = Modifier.weight(1f).height(48.dp),
                     shape = RoundedCornerShape(14.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = SyntraSalmon)
-                ) { Text("Guardar", color = Color.White, fontWeight = FontWeight.SemiBold) }
+                ) {
+                    Text("Guardar", color = Color.White, fontWeight = FontWeight.SemiBold)
+                }
             }
 
             Spacer(Modifier.height(10.dp))
 
-            // Enlace tránsito
             Text(
-                text = "Consulta tus comparendos",
+                text = "¿Has olvidado tu contraseña?",
                 color = SyntraBlue,
                 fontSize = 13.sp,
                 modifier = Modifier
                     .align(Alignment.CenterHorizontally)
-                    .clickable { onConsultComparendos() },
+                    .clickable { onForgotPassword() },
                 textAlign = TextAlign.Center
             )
 
             Spacer(Modifier.height(18.dp))
 
-            // Cerrar sesión
             Button(
-                onClick = onLogout,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(52.dp),
+                onClick = {
+                    auth.signOut()
+                    onLogout()
+                },
+                modifier = Modifier.fillMaxWidth().height(52.dp),
                 shape = RoundedCornerShape(26.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = SyntraBlue)
             ) {
                 Text("Cerrar sesión", color = Color.White, fontWeight = FontWeight.SemiBold)
+            }
+
+            message?.let {
+                Spacer(Modifier.height(10.dp))
+                Text(it, color = if (it.contains("Error")) Color(0xFFB00020) else Color(0xFF008000))
             }
         }
     }
