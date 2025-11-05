@@ -21,7 +21,10 @@ import androidx.compose.foundation.Image
 import me.camilanino.syntra.R
 
 @Composable
-fun WelcomeScreen() {
+fun WelcomeScreen(
+    onLoginUser: () -> Unit,
+    onLoginTransito: () -> Unit
+) {
     var selectedOption by remember { mutableStateOf<String?>(null) }
 
     Column(
@@ -63,7 +66,12 @@ fun WelcomeScreen() {
 
         // --- BOTÓN DE INICIO ---
         Button(
-            onClick = { /* Navegación futura */ },
+            onClick = {
+                when (selectedOption) {
+                    "Usuario" -> onLoginUser()
+                    "Tránsito" -> onLoginTransito()
+                }
+            },
             colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFE74C3C)),
             modifier = Modifier
                 .fillMaxWidth(0.6f)

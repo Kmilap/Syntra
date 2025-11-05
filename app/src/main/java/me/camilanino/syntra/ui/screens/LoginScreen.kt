@@ -27,6 +27,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.google.firebase.auth.FirebaseAuth
 import androidx.compose.foundation.text.KeyboardOptions as FKeyboardOptions
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.ArrowBack
 
 /* ====== Paleta ====== */
 private val SyntraBlue   = Color(0xFF4D81E7)
@@ -97,39 +99,59 @@ private fun LabeledTextField(
 @Composable
 private fun LoginHeader(
     title: String = "Ingresa en tu cuenta",
-    subtitle: String = "Introduce tu email y contraseña para iniciar sesión"
+    subtitle: String = "Introduce tu email y contraseña para iniciar sesión",
+    onBackClick: (() -> Unit)? = null
 ) {
-    Column(
+    Box(
         modifier = Modifier
             .fillMaxWidth()
             .background(SyntraSalmon)
-            .padding(top = 80.dp, bottom = 40.dp, start = 24.dp, end = 24.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
+            .padding(top = 60.dp, bottom = 40.dp, start = 24.dp, end = 24.dp)
     ) {
-        Text(
-            text = title,
-            color = Color.White,
-            fontSize = 28.sp,
-            fontWeight = FontWeight.ExtraBold,
-            lineHeight = 32.sp,
-            textAlign = TextAlign.Center
-        )
-        Spacer(Modifier.height(6.dp))
-        Text(
-            text = subtitle,
-            color = Color.White.copy(alpha = 0.9f),
-            fontSize = 13.sp,
-            textAlign = TextAlign.Center
-        )
+        // Flecha de retroceso
+        IconButton(
+            onClick = { onBackClick?.invoke() },
+            modifier = Modifier.align(Alignment.TopStart)
+        ) {
+            Icon(
+                imageVector = Icons.Default.ArrowBack,
+                contentDescription = "Volver",
+                tint = Color.White
+            )
+        }
+
+        // Títulos centrados
+        Column(
+            modifier = Modifier.align(Alignment.Center),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(
+                text = title,
+                color = Color.White,
+                fontSize = 28.sp,
+                fontWeight = FontWeight.ExtraBold,
+                lineHeight = 32.sp,
+                textAlign = TextAlign.Center
+            )
+            Spacer(Modifier.height(6.dp))
+            Text(
+                text = subtitle,
+                color = Color.White.copy(alpha = 0.9f),
+                fontSize = 13.sp,
+                textAlign = TextAlign.Center
+            )
+        }
     }
 }
+
 
 /* ====== Pantalla Login con Firebase (auto-skip si hay sesión) ====== */
 @Composable
 fun LoginScreen(
     onRegisterClick: (() -> Unit)? = null,
     onForgotPassword: ((String) -> Unit)? = null,
-    onLoginSuccess: (() -> Unit)? = null
+    onLoginSuccess: (() -> Unit)? = null,
+    onBackClick: (() -> Unit)? = null
 ) {
     val auth = remember { FirebaseAuth.getInstance() }
     val context = androidx.compose.ui.platform.LocalContext.current
@@ -166,7 +188,9 @@ fun LoginScreen(
             .fillMaxSize()
             .background(SyntraWhite)
     ) {
-        LoginHeader()
+        LoginHeader(
+            onBackClick = { onBackClick?.invoke() }
+        )
 
         Surface(
             modifier = Modifier

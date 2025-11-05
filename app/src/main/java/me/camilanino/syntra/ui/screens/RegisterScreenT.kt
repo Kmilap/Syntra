@@ -33,6 +33,8 @@ import androidx.compose.ui.platform.LocalDensity
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import androidx.compose.foundation.text.KeyboardOptions as FKeyboardOptions
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.ArrowBack
 
 /* ====== PALETA (colores consistentes con Syntra) ====== */
 private val SyntraBlue   = Color(0xFF4D81E7)
@@ -104,7 +106,8 @@ private fun LabeledTextField(
 private fun HeaderWithWaveRegister(
     title: String = "Registrarse (Tránsito)",
     subtitle: String = "Crea tu cuenta de agente de tránsito",
-    waveHeightDp: Int = 56
+    waveHeightDp: Int = 56,
+    onBackClick: (() -> Unit)? = null
 ) {
     Box(
         modifier = Modifier
@@ -113,6 +116,20 @@ private fun HeaderWithWaveRegister(
             .wrapContentHeight(),
         contentAlignment = Alignment.Center
     ) {
+        // Flecha de retroceso
+        IconButton(
+            onClick = { onBackClick?.invoke() },
+            modifier = Modifier
+                .align(Alignment.TopStart)
+                .padding(top = 40.dp, start = 8.dp)
+        ) {
+            Icon(
+                imageVector = Icons.Filled.ArrowBack,
+                contentDescription = "Volver",
+                tint = Color.White
+            )
+        }
+
         Column(
             modifier = Modifier
                 .fillMaxWidth()
@@ -151,7 +168,6 @@ private fun HeaderWithWaveRegister(
         ) {
             val width = size.width
             val height = size.height
-
             val path = Path().apply {
                 moveTo(0f, 0f)
                 quadraticBezierTo(width * 0.25f, height * 0.9f, width * 0.5f, height * 0.6f)
@@ -165,10 +181,12 @@ private fun HeaderWithWaveRegister(
     }
 }
 
+
 /* ====== PANTALLA REGISTRO (TRÁNSITO) CON FIREBASE ====== */
 @Composable
 fun RegisterScreenT(
-    onLoginNavigate: () -> Unit = {}
+    onLoginNavigate: () -> Unit = {},
+    onBackClick: (() -> Unit)? = null
 ) {
     val auth = FirebaseAuth.getInstance()
     val db = FirebaseFirestore.getInstance()
@@ -185,7 +203,9 @@ fun RegisterScreenT(
             .fillMaxSize()
             .background(SyntraWhite)
     ) {
-        HeaderWithWaveRegister()
+        HeaderWithWaveRegister(
+            onBackClick = { onLoginNavigate() }
+        )
 
         Surface(
             modifier = Modifier
@@ -272,6 +292,10 @@ fun RegisterScreenT(
                                         .addOnSuccessListener {
                                             status = "Agente registrado correctamente"
                                             loading = false
+
+
+                                            auth.signOut()          // opcional: forzar login limpio
+                                            onLoginNavigate()
                                         }
                                         .addOnFailureListener { e ->
                                             status = "Error guardando perfil de agente: ${e.message}"

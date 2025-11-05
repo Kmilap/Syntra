@@ -19,6 +19,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.ArrowBack
 
 /* ====== PALETA ====== */
 private val SyntraBlue   = Color(0xFF4D81E7)
@@ -28,40 +30,61 @@ private val SyntraGray   = Color(0xFF6C7278)
 
 /* ====== HEADER ====== */
 @Composable
-private fun HeaderVerification(title: String, subtitle: String = "") {
+private fun HeaderVerification(
+    title: String,
+    subtitle: String = "",
+    onBackClick: (() -> Unit)? = null
+) {
     Surface(modifier = Modifier.fillMaxWidth(), color = SyntraSalmon) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(top = 100.dp, bottom = 62.dp, start = 24.dp, end = 24.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Icon(
-                Icons.Outlined.LocationOn,
-                contentDescription = null,
-                tint = Color.White,
-                modifier = Modifier.size(44.dp)
-            )
-            Spacer(Modifier.height(12.dp))
-            Text(
-                title,
-                color = Color.White,
-                fontSize = 28.sp,
-                fontWeight = FontWeight.ExtraBold,
-                textAlign = TextAlign.Center
-            )
-            if (subtitle.isNotEmpty()) {
-                Spacer(Modifier.height(8.dp))
+        Box {
+            // Flecha de retroceso
+            IconButton(
+                onClick = { onBackClick?.invoke() },
+                modifier = Modifier
+                    .align(Alignment.TopStart)
+                    .padding(top = 40.dp, start = 8.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.ArrowBack,
+                    contentDescription = "Volver",
+                    tint = Color.White
+                )
+            }
+
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 100.dp, bottom = 62.dp, start = 24.dp, end = 24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Icon(
+                    Icons.Outlined.LocationOn,
+                    contentDescription = null,
+                    tint = Color.White,
+                    modifier = Modifier.size(44.dp)
+                )
+                Spacer(Modifier.height(12.dp))
                 Text(
-                    subtitle,
-                    color = Color.White.copy(alpha = 0.94f),
-                    fontSize = 13.sp,
+                    title,
+                    color = Color.White,
+                    fontSize = 28.sp,
+                    fontWeight = FontWeight.ExtraBold,
                     textAlign = TextAlign.Center
                 )
+                if (subtitle.isNotEmpty()) {
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        subtitle,
+                        color = Color.White.copy(alpha = 0.94f),
+                        fontSize = 13.sp,
+                        textAlign = TextAlign.Center
+                    )
+                }
             }
         }
     }
 }
+
 
 /* =============================================================================
  * VERIFICATION SCREEN (solo email reset, editable)
@@ -71,7 +94,8 @@ fun VerificationScreen(
     initialEmail: String = "",
     onSendReset: suspend (email: String) -> Result<Unit>, // manda el link (sendPasswordResetEmail)
     onUseAnotherMethod: () -> Unit = {},                  // navegar a ChangePasswordScreen
-    onAfterSend: () -> Unit = {}                          // opcional (p.ej. volver al Login)
+    onAfterSend: () -> Unit = {},                       // opcional (p.ej. volver al Login)
+    onBackClick: (() -> Unit)? = null // ← agrégalo aquí
 ) {
     var email by remember { mutableStateOf(initialEmail) }
     var isLoading by remember { mutableStateOf(false) }
@@ -97,7 +121,9 @@ fun VerificationScreen(
     ) {
         HeaderVerification(
             title = "Recuperar contraseña",
-            subtitle = "Te enviaremos un enlace a tu correo para restablecer tu contraseña."
+            subtitle = "Te enviaremos un enlace a tu correo para restablecer tu contraseña.",
+            onBackClick = onBackClick
+
         )
 
         Surface(

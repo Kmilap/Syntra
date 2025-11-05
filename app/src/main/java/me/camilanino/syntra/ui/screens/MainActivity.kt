@@ -35,9 +35,10 @@ class MainActivity : ComponentActivity() {
         val prefs = getSharedPreferences("auth_prefs", Context.MODE_PRIVATE)
 
         setContent {
+            AppNavHost()
 
-            }
         }
     }
+}
 
 

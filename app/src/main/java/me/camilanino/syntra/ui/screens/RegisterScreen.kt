@@ -32,6 +32,8 @@ import androidx.compose.ui.platform.LocalDensity
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import androidx.compose.foundation.text.KeyboardOptions as FKeyboardOptions
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.ArrowBack
 
 /* ====== PALETA (colores consistentes con Syntra) ====== */
 private val SyntraBlue   = Color(0xFF4D81E7)
@@ -103,7 +105,8 @@ private fun LabeledTextField(
 private fun HeaderWithWaveRegister(
     title: String = "Registrarse",
     subtitle: String = "Completa los campos para crear tu cuenta",
-    waveHeightDp: Int = 56
+    waveHeightDp: Int = 56,
+    onBackClick: (() -> Unit)? = null
 ) {
     Box(
         modifier = Modifier
@@ -112,6 +115,20 @@ private fun HeaderWithWaveRegister(
             .wrapContentHeight(),
         contentAlignment = Alignment.Center
     ) {
+        // Flecha de retroceso
+        IconButton(
+            onClick = { onBackClick?.invoke() },
+            modifier = Modifier
+                .align(Alignment.TopStart)
+                .padding(top = 40.dp, start = 8.dp)
+        ) {
+            Icon(
+                imageVector = Icons.Default.ArrowBack,
+                contentDescription = "Volver",
+                tint = Color.White
+            )
+        }
+
         Column(
             modifier = Modifier
                 .fillMaxWidth()
@@ -164,10 +181,12 @@ private fun HeaderWithWaveRegister(
     }
 }
 
+
 /* ====== PANTALLA REGISTRO CON FIREBASE ====== */
 @Composable
 fun RegisterScreen(
-    onLoginNavigate: () -> Unit = {}
+    onLoginNavigate: () -> Unit = {},
+    onBackClick: () -> Unit = {}
 ) {
     val auth = FirebaseAuth.getInstance()
     val db = FirebaseFirestore.getInstance()
@@ -184,7 +203,9 @@ fun RegisterScreen(
             .fillMaxSize()
             .background(SyntraWhite)
     ) {
-        HeaderWithWaveRegister()
+        HeaderWithWaveRegister(
+            onBackClick = { onBackClick() }
+        )
 
         Surface(
             modifier = Modifier

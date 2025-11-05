@@ -33,6 +33,8 @@ import androidx.compose.foundation.Canvas
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import androidx.compose.foundation.text.KeyboardOptions as FKeyboardOptions
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.ArrowBack
 
 /* ====== PALETA ====== */
 private val SyntraBlue   = Color(0xFF4D81E7)
@@ -102,7 +104,8 @@ private fun LabeledTextField(
 private fun HeaderWithWave(
     title: String,
     subtitle: String,
-    waveHeightDp: Int = 56
+    waveHeightDp: Int = 56,
+    onBackClick: (() -> Unit)? = null
 ) {
     Box(
         modifier = Modifier
@@ -111,6 +114,20 @@ private fun HeaderWithWave(
             .wrapContentHeight(),
         contentAlignment = Alignment.Center
     ) {
+        // Flecha de retroceso
+        IconButton(
+            onClick = { onBackClick?.invoke() },
+            modifier = Modifier
+                .align(Alignment.TopStart)
+                .padding(top = 40.dp, start = 8.dp)
+        ) {
+            Icon(
+                imageVector = Icons.Default.ArrowBack,
+                contentDescription = "Volver",
+                tint = Color.White
+            )
+        }
+
         Column(
             modifier = Modifier
                 .fillMaxWidth()
@@ -149,7 +166,6 @@ private fun HeaderWithWave(
         ) {
             val width = size.width
             val height = size.height
-
             val path = Path().apply {
                 moveTo(0f, 0f)
                 quadraticBezierTo(width * 0.25f, height * 0.9f, width * 0.5f, height * 0.6f)
@@ -163,12 +179,14 @@ private fun HeaderWithWave(
     }
 }
 
+
 /* ====== LOGIN DE TRÁNSITO CON SESIÓN PERSISTENTE ====== */
 @Composable
 fun LoginScreenT(
     onForgotPassword: (String) -> Unit = {},
     onRegister: () -> Unit = {},
-    onLoginSuccess: ((agentDoc: Map<String, Any?>) -> Unit)? = null
+    onLoginSuccess: ((agentDoc: Map<String, Any?>) -> Unit)? = null,
+    onBackClick: (() -> Unit)? = null
 ) {
     val auth = FirebaseAuth.getInstance()
     val db = FirebaseFirestore.getInstance()
@@ -215,7 +233,8 @@ fun LoginScreenT(
         HeaderWithWave(
             title = "Ingreso Agentes de Tránsito",
             subtitle = "Usa tu correo institucional y contraseña",
-            waveHeightDp = 64
+            waveHeightDp = 64,
+            onBackClick = { onBackClick?.invoke() }
         )
 
         Surface(
