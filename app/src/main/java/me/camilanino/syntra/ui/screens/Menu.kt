@@ -1,7 +1,11 @@
 package me.camilanino.syntra.ui.screens
 
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
@@ -9,74 +13,123 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.outlined.*
+import androidx.compose.material.icons.outlined.AccountCircle
+import androidx.compose.material.icons.outlined.ArrowBackIosNew
+import androidx.compose.material.icons.outlined.AssignmentTurnedIn
+import androidx.compose.material.icons.outlined.Map
+import androidx.compose.material.icons.outlined.RateReview
+import androidx.compose.material.icons.outlined.SmartToy
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.draw.*
+import androidx.compose.ui.graphics.*
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.navigation.NavController
 
-
-
-/* ====== PALETA (tus colores) ====== */
-private val SyntraSalmon = Color(0xD9E74C3C) // Rojo/Salmón del encabezado
-private val SyntraYellow = Color(0xFFF7C800) // Amarillo de las tarjetas
+/* ====== PALETA ====== */
+private val SyntraCoral = Color(0xFFE64A3D)
+private val SyntraSalmon = Color(0xFFFF8066)
 private val SyntraGray = Color(0xFF6C7278)
-private val MainBackground = Color(0xFFE4F0F7) // Fondo general azul claro/grisáceo
+private val BackgroundGray = Color(0xFFECECEC)
+private val TextDark = Color(0xFF2B2B2B)
 
-
-// --- COMPONENTES AUXILIARES ---
-
+/* ====== TARJETAS ====== */
+/* ====== TARJETAS ====== */
 @Composable
-private fun CardItem(title: String) {
+private fun CardItem(title: String, navController: NavController, role: String) {
+    var pressed by remember { mutableStateOf(false) }
+
+    val elevation by animateDpAsState(
+        targetValue = if (pressed) 10.dp else 4.dp,
+        animationSpec = spring(dampingRatio = 0.7f)
+    )
+
+    val icon = when (title) {
+        "Hacer reportes" -> Icons.Outlined.AssignmentTurnedIn
+        "Mapa" -> Icons.Outlined.Map
+        "Chatbot Syntra" -> Icons.Outlined.SmartToy
+        "Feedback" -> Icons.Outlined.RateReview
+        else -> Icons.Outlined.AssignmentTurnedIn
+    }
+
+    // === NUEVO BLOQUE: NAVEGACIÓN SEGÚN TÍTULO ===
+    val destination = when (title) {
+        "Hacer reportes" -> "report_screen/$role?fromMenu=true"
+        "Mapa" -> "mapa_screen/$role?fromMenu=true"
+        "Chatbot Syntra" -> "chatbot_screen/$role?fromMenu=true"
+        "Feedback" -> "feedback_screen/$role?fromMenu=true"
+        else -> ""
+    }
+
     Card(
-        shape = RoundedCornerShape(16.dp),
+        shape = RoundedCornerShape(24.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = elevation),
+        colors = CardDefaults.cardColors(containerColor = Color.Transparent),
         modifier = Modifier
             .fillMaxWidth()
-            .height(180.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = SyntraSalmon,
-        )
-    ) {
-        Column(Modifier.fillMaxSize()) {
-
-            Spacer(Modifier.weight(1f))
-
-            // Banda amarilla inferior
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(50.dp) // Altura de la banda amarilla
-                    .background(SyntraYellow),
-                contentAlignment = Alignment.Center
+            .height(180.dp)
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null
             ) {
-                Text(
-                    text = title,
-                    color = Color.Black,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 14.sp
-                )
+                pressed = !pressed
+                if (destination.isNotEmpty()) {
+                    navController.navigate(destination) {
+                        popUpTo("menu_user") { inclusive = false }
+                    }
+                }
+
             }
+            .shadow(elevation, RoundedCornerShape(24.dp))
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(
+                    brush = Brush.verticalGradient(
+                        colors = listOf(Color.White, Color(0xFFF9F9F9))
+                    ),
+                    shape = RoundedCornerShape(24.dp)
+                )
+                .padding(16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = title,
+                tint = SyntraCoral,
+                modifier = Modifier
+                    .size(48.dp)
+                    .padding(bottom = 12.dp)
+            )
+            Text(
+                text = title,
+                color = TextDark,
+                fontSize = 17.sp,
+                fontWeight = FontWeight.Medium,
+                textAlign = TextAlign.Center
+            )
         }
     }
 }
 
+
+
+/* ====== BARRA DE BÚSQUEDA ====== */
 @Composable
 private fun CustomSearchBar() {
     OutlinedTextField(
-        value = "", // Sin funcionalidad, valor vacío
-        onValueChange = { /* Nada */ },
+        value = "",
+        onValueChange = {},
         placeholder = { Text("Busca servicios", color = SyntraGray.copy(alpha = 0.7f)) },
         leadingIcon = {
-            Icon(
-                imageVector = Icons.Filled.Search,
-                contentDescription = "Buscar",
-                tint = SyntraGray
-            )
+            Icon(Icons.Filled.Search, contentDescription = "Buscar", tint = SyntraGray)
         },
         singleLine = true,
         colors = OutlinedTextFieldDefaults.colors(
@@ -85,118 +138,187 @@ private fun CustomSearchBar() {
             focusedContainerColor = Color.White,
             unfocusedContainerColor = Color.White,
         ),
-        shape = RoundedCornerShape(25.dp), // Esquinas muy redondeadas
+        shape = RoundedCornerShape(25.dp),
         modifier = Modifier
             .fillMaxWidth()
-            .height(50.dp)
+            .height(52.dp)
+            .shadow(4.dp, RoundedCornerShape(25.dp))
     )
 }
 
-// --- PANTALLA PRINCIPAL ---
-
+/* ====== PANTALLA PRINCIPAL ====== */
 @Composable
-fun Menu() {
+fun Menu(navController: NavController, role: String = "usuario") {
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(MainBackground)
+            .background(BackgroundGray)
     ) {
-        // 1. Contenedor Superior Rojo (Header)
+        // HEADER degradado coral → salmón
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(270.dp)
+                .background(
+                    brush = Brush.verticalGradient(
+                        colors = listOf(SyntraCoral, SyntraSalmon)
+                    )
+                )
+        )
+
+        // CONTENIDO DEL HEADER
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(220.dp)
-                .background(SyntraSalmon)
-                .padding(horizontal = 24.dp)
-                .padding(top = 16.dp)
+                .padding(horizontal = 24.dp, vertical = 28.dp)
         ) {
-            // Fila de Perfil y Notificación
+            // Fila superior: flecha y perfil
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
+                // Flecha de retroceso
+                Icon(
+                    imageVector = Icons.Outlined.ArrowBackIosNew,
+                    contentDescription = "Volver",
+                    tint = Color.White,
+                    modifier = Modifier
+                        .size(28.dp)
+                        .clickable { navController.navigate("main_page/usuario") }
+                )
 
-                // Icon vectorial, para el perfil de usuario
+                // Perfil
                 Box(
                     modifier = Modifier
-                        .size(40.dp)
+                        .size(42.dp)
                         .clip(CircleShape)
-                        .border(2.dp, Color.White, CircleShape)
-                        .background(Color.Gray.copy(alpha = 0.5f)),
+                        .background(Color.White.copy(alpha = 0.25f)),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
                         imageVector = Icons.Outlined.AccountCircle,
-                        contentDescription = "Icono de perfil",
+                        contentDescription = "Perfil",
                         tint = Color.White,
-                        modifier = Modifier.size(40.dp)
-                    )
-                }
-
-                // Botón de Notificación (Campana)
-                Box(
-                    modifier = Modifier
-                        .size(32.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Outlined.Notifications,
-                        contentDescription = "Notificaciones",
-                        tint = Color.White,
-                        modifier = Modifier.align(Alignment.Center)
-                    )
-                    // Punto rojo de notificación
-                    Box(
                         modifier = Modifier
-                            .size(8.dp)
-                            .clip(CircleShape)
-                            .background(Color.Red)
-                            .align(Alignment.TopEnd)
+                            .size(38.dp)
+                            .clickable {
+                                navController.navigate("profile_user?fromMenu=true")
+
+                            }
+
                     )
+
                 }
             }
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(Modifier.height(22.dp))
 
             // Saludo
             Text(
-                text = "Hola, Julian Lizcano",
+                text = "Hola, Juan Diego",
                 color = Color.White,
-                fontSize = 24.sp,
-                fontWeight = FontWeight.Bold
+                fontSize = 26.sp,
+                fontWeight = FontWeight.Bold,
+                lineHeight = 30.sp
             )
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(Modifier.height(24.dp)) // se bajó la barra
 
-            // Barra de Búsqueda
+            // Barra de búsqueda (ligeramente más abajo)
             CustomSearchBar()
         }
 
-        // 2. Contenido Principal (Tarjetas)
+        // CONTENIDO PRINCIPAL
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(top = 220.dp)
+                .padding(top = 280.dp)
         ) {
-
             LazyVerticalGrid(
                 columns = GridCells.Fixed(2),
-                contentPadding = PaddingValues(24.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp),
-                horizontalArrangement = Arrangement.spacedBy(16.dp),
-                modifier = Modifier.weight(1f)
+                contentPadding = PaddingValues(20.dp),
+                verticalArrangement = Arrangement.spacedBy(24.dp),
+                horizontalArrangement = Arrangement.spacedBy(20.dp)
             ) {
-                item { CardItem(title = "Hacer reportes") }
-                item { CardItem(title = "Mapa") }
-                item { CardItem(title = "Chatbot Syntra") }
-                item { CardItem(title = "FeedBack") }
+                item { CardItem("Hacer reportes", navController, role) }
+                item { CardItem("Mapa", navController, role) }
+                item { CardItem("Chatbot Syntra", navController, role) }
+                item { CardItem("Feedback", navController, role) }
+
+
             }
+        }
 
+        // DEGRADADO INFERIOR con más cuerpo y presencia
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(160.dp)
+                .align(Alignment.BottomCenter)
+                .background(
+                    brush = Brush.verticalGradient(
+                        colors = listOf(
+                            Color(0x00FFFFFF),
+                            Color(0xFFF66B54).copy(alpha = 0.85f),
+                            Color(0xFFFF9E85).copy(alpha = 0.9f),
+                            Color(0xFFFFF2EF)
+                        )
+                    )
+                )
+        )
+
+// Sombra sutil que da cierre visual (colócala justo arriba del degradado)
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(8.dp)
+                .align(Alignment.BottomCenter)
+                .background(
+                    brush = Brush.verticalGradient(
+                        colors = listOf(
+                            Color.Black.copy(alpha = 0.05f),
+                            Color.Transparent
+                        )
+                    )
+                )
+        )
+        // SECCIÓN INFERIOR CURVA — CIERRE VISUAL
+        Canvas(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(140.dp)
+                .align(Alignment.BottomCenter)
+        ) {
+            val curveHeight = 60f
+            val path = Path().apply {
+                moveTo(0f, 0f)
+                quadraticBezierTo(size.width / 2, curveHeight * 2, size.width, 0f)
+                lineTo(size.width, size.height)
+                lineTo(0f, size.height)
+                close()
+            }
+            drawPath(path, Color.White)
+        }
+
+// TEXTO DECORATIVO / TAGLINE
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(100.dp)
+                .align(Alignment.BottomCenter),
+            contentAlignment = Alignment.TopCenter
+        ) {
+            Text(
+                text = "Reporta, consulta y contribuye con tu ciudad",
+                color = SyntraGray.copy(alpha = 0.8f),
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Medium,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.padding(top = 30.dp)
+            )
         }
 
 
-        Box(modifier = Modifier.align(Alignment.BottomCenter)) {
-            BottomNavBar()
-        }
     }
 }

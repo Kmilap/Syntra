@@ -1,5 +1,6 @@
 package me.camilanino.syntra.ui.screens
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -10,6 +11,7 @@ import androidx.compose.material.icons.outlined.AttachFile
 import androidx.compose.material.icons.outlined.Send
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -20,6 +22,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.navigation.NavController
 import me.camilanino.syntra.R
 
 /* ====== FUENTES Y COLORES ====== */
@@ -35,13 +38,18 @@ private val SyntraDarkBlue = Color(0xFF273746)
 /* ====== PANTALLA PRINCIPAL ====== */
 
 @Composable
-fun ChatbotScreen() {
+fun ChatbotScreen(navController: NavController, role: String,fromMenu: Boolean = false) {
+    // Solo para depuración inicial
+    LaunchedEffect(role) {
+        println("Rol detectado en ChatbotScreen: $role")
+    }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
             .background(SyntraWhite)
     ) {
-        ChatHeader()
+        ChatHeader(navController, role,fromMenu)
         Spacer(Modifier.height(10.dp))
         ChatMessages(
             modifier = Modifier
@@ -49,13 +57,12 @@ fun ChatbotScreen() {
                 .fillMaxWidth()
         )
         ChatInputBar()
-        BottomNavBar()
     }
 }
 
 /* ====== ENCABEZADO ====== */
 @Composable
-fun ChatHeader() {
+fun ChatHeader(navController: NavController, role: String, fromMenu: Boolean = false) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -68,7 +75,20 @@ fun ChatHeader() {
                 imageVector = Icons.Outlined.ArrowBack,
                 contentDescription = "Atrás",
                 tint = Color.Black,
-                modifier = Modifier.size(22.dp)
+                modifier = Modifier
+                    .size(22.dp)
+                    .clickable {
+                        if (fromMenu) {
+                            if (role == "usuario") {
+                                navController.navigate("menu_user")
+                            } else {
+                                navController.navigate("menu_transito")
+                            }
+                        } else {
+                            navController.navigate("main_page/$role")
+                        }
+                    }
+
             )
             Spacer(Modifier.width(10.dp))
             Column(
@@ -98,6 +118,7 @@ fun ChatHeader() {
         )
     }
 }
+
 
 /* ====== CUERPO DEL CHAT ====== */
 @Composable

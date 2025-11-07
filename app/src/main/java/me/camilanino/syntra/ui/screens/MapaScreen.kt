@@ -18,6 +18,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.navigation.NavController
 import me.camilanino.syntra.R
 
 /* ====== FUENTES ====== */
@@ -31,7 +32,7 @@ private val SyntraGreen = Color(0xFF63B58D)
 private val SyntraGray = Color(0xFF6C7278)
 
 @Composable
-fun MapaScreen(onBackClick: () -> Unit = {}) {
+fun MapaScreen(navController: NavController, role: String, fromMenu: Boolean = false, fromMap: Boolean = false) {
     Box(modifier = Modifier.fillMaxSize()) {
         // === Fondo del mapa ===
         Image(
@@ -41,9 +42,26 @@ fun MapaScreen(onBackClick: () -> Unit = {}) {
             modifier = Modifier.fillMaxSize()
         )
 
-        // === Flecha de retroceso ===
+        // === Flecha de retroceso funcional ===
         IconButton(
-            onClick = onBackClick,
+            onClick = {
+                if (fromMenu) {
+                    // Si viene desde el menú
+                    if (role == "usuario") {
+                        navController.navigate("menu_user")
+                    } else {
+                        navController.navigate("menu_transito")
+                    }
+                } else {
+                    // Si viniera desde otro lado (por si acaso)
+                    if (role == "usuario") {
+                        navController.navigate("main_page/usuario")
+                    } else {
+                        navController.navigate("main_page/agente")
+                    }
+                }
+            }
+            ,
             modifier = Modifier
                 .padding(start = 14.dp, top = 24.dp)
                 .size(38.dp)
@@ -79,13 +97,16 @@ fun MapaScreen(onBackClick: () -> Unit = {}) {
 
                 Spacer(Modifier.height(12.dp))
 
+
                 // === Botones inferiores ===
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     Button(
-                        onClick = { /* acción reportar */ },
+                        onClick = {
+                            navController.navigate("report_screen/$role?fromMap=true&fromMenu=false")
+                        },
                         colors = ButtonDefaults.buttonColors(containerColor = SyntraGreen),
                         shape = RoundedCornerShape(14.dp),
                         modifier = Modifier
@@ -102,7 +123,9 @@ fun MapaScreen(onBackClick: () -> Unit = {}) {
                     }
 
                     OutlinedButton(
-                        onClick = { /* acción reportes recientes */ },
+                        onClick = {
+                            navController.navigate("history_screen/$role?fromMap=true&fromMenu=false")
+                        },
                         shape = RoundedCornerShape(14.dp),
                         border = ButtonDefaults.outlinedButtonBorder.copy(width = 1.dp),
                         modifier = Modifier
@@ -117,11 +140,14 @@ fun MapaScreen(onBackClick: () -> Unit = {}) {
                             color = Color.Black
                         )
                     }
+
                 }
+
             }
         }
     }
 }
+
 
 /* ====== ITEM DE ESTADO ====== */
 @Composable

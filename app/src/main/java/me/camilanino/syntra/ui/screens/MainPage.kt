@@ -4,12 +4,12 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -22,6 +22,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.navigation.NavController
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FirebaseFirestore
 import me.camilanino.syntra.R
 
 /* ====== FUENTES PERSONALIZADAS ====== */
@@ -34,13 +37,37 @@ private val SyntraSalmon = Color(0xFFE74C3C)
 private val SyntraWhite  = Color(0xFFF1F2F8)
 private val SyntraGray   = Color(0xFF6C7278)
 private val SyntraGreen  = Color(0xFF63B58D)
-private val SyntraDarkBlue = Color(0xFF273746) // color del botón central
+private val SyntraDarkBlue = Color(0xFF273746)
+
 
 
 
 /* ====== MAIN PAGE ====== */
 @Composable
-fun MainPage() {
+fun MainPage(navController: NavController, role: String) {
+    var userRole by remember { mutableStateOf("usuario") } // por defecto
+
+    // 🔹 Detecta el rol desde Firestore
+    LaunchedEffect(Unit) {
+        val uid = FirebaseAuth.getInstance().currentUser?.uid
+        val db = FirebaseFirestore.getInstance()
+
+        uid?.let {
+            db.collection("users").document(uid).get()
+                .addOnSuccessListener { doc ->
+                    if (doc.exists()) {
+                        userRole = "usuario"
+                    } else {
+                        db.collection("transito").document(uid).get()
+                            .addOnSuccessListener { agentDoc ->
+                                if (agentDoc.exists()) userRole = "agente"
+                            }
+                    }
+                }
+        }
+    }
+
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -48,17 +75,41 @@ fun MainPage() {
     ) {
         TopSection()
         Spacer(Modifier.height(26.dp))
-        MainContent()
+        MainContent(navController)
         Spacer(Modifier.height(36.dp))
         ReportSummary()
         Spacer(modifier = Modifier.weight(1f))
-        BottomNavBar()
+        BottomNavBar(navController, userRole)
     }
 }
 
 /* ====== HEADER SUPERIOR ====== */
 @Composable
 fun TopSection() {
+    val auth = FirebaseAuth.getInstance()
+    val db = FirebaseFirestore.getInstance()
+
+    var displayName by remember { mutableStateOf<String?>(null) }
+
+    LaunchedEffect(Unit) {
+        val uid = auth.currentUser?.uid
+        if (uid != null) {
+            db.collection("users").document(uid).get()
+                .addOnSuccessListener { doc ->
+                    if (doc.exists()) {
+                        displayName = doc.getString("username") ?: "Usuario"
+                    } else {
+                        db.collection("transito").document(uid).get()
+                            .addOnSuccessListener { agentDoc ->
+                                displayName = if (agentDoc.exists()) "Agente" else "Usuario"
+                            }
+                    }
+                }
+        } else {
+            displayName = "Usuario"
+        }
+    }
+
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -90,7 +141,7 @@ fun TopSection() {
         Spacer(Modifier.height(10.dp))
 
         Text(
-            text = "Hola, Juan Diego",
+            text = "Hola, ${displayName ?: "..."}",
             color = SyntraGray,
             fontSize = 14.sp,
             fontWeight = FontWeight.Medium,
@@ -101,15 +152,37 @@ fun TopSection() {
 }
 
 /* ====== CONTENIDO CENTRAL ====== */
+/* ====== CONTENIDO CENTRAL ====== */
 @Composable
-fun MainContent() {
+fun MainContent(navController: NavController) {
+    // Detectamos el rol desde Firebase igual que arriba
+    var userRole by remember { mutableStateOf("usuario") }
+
+    LaunchedEffect(Unit) {
+        val uid = FirebaseAuth.getInstance().currentUser?.uid
+        val db = FirebaseFirestore.getInstance()
+
+        uid?.let {
+            db.collection("users").document(uid).get()
+                .addOnSuccessListener { doc ->
+                    if (doc.exists()) {
+                        userRole = "usuario"
+                    } else {
+                        db.collection("transito").document(uid).get()
+                            .addOnSuccessListener { agentDoc ->
+                                if (agentDoc.exists()) userRole = "agente"
+                            }
+                    }
+                }
+        }
+    }
+
     Column(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 28.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        // Imagen del semáforo principal
         Image(
             painter = painterResource(id = R.drawable.ic_traffic_light),
             contentDescription = "Semáforo",
@@ -120,7 +193,6 @@ fun MainContent() {
 
         Spacer(Modifier.height(20.dp))
 
-        // Título principal
         Text(
             text = "Avista y reporta\nsemáforos averiados",
             fontFamily = SfProRounded,
@@ -133,7 +205,6 @@ fun MainContent() {
 
         Spacer(Modifier.height(8.dp))
 
-        // Subtítulo
         Text(
             text = "Supervisa el estado de los semáforos de tu ciudad en tiempo real",
             fontFamily = SfPro,
@@ -146,9 +217,11 @@ fun MainContent() {
 
         Spacer(Modifier.height(26.dp))
 
-        // Botón Reportar Falla
+        // === BOTÓN REPORTAR FALLA ===
         Button(
-            onClick = {},
+            onClick = {
+                navController.navigate("report_screen/$userRole")
+            },
             modifier = Modifier
                 .fillMaxWidth()
                 .height(52.dp),
@@ -174,9 +247,11 @@ fun MainContent() {
 
         Spacer(Modifier.height(12.dp))
 
-        // Botón Ver Reportes
+        // === BOTÓN VER REPORTES ===
         OutlinedButton(
-            onClick = {},
+            onClick = {
+                navController.navigate("history_screen/$userRole")
+            },
             modifier = Modifier
                 .fillMaxWidth()
                 .height(52.dp),
@@ -202,7 +277,8 @@ fun MainContent() {
     }
 }
 
-/* ====== RESUMEN DE REPORTES ====== */
+
+/* ====== RESUMEN ====== */
 @Composable
 fun ReportSummary() {
     Surface(
@@ -210,7 +286,7 @@ fun ReportSummary() {
             .fillMaxWidth()
             .padding(horizontal = 24.dp, vertical = 12.dp),
         shape = RoundedCornerShape(24.dp),
-        color = Color(0xFFE6E6E6), // gris más fuerte
+        color = Color(0xFFE6E6E6),
         tonalElevation = 2.dp
     ) {
         Column(
@@ -226,9 +302,7 @@ fun ReportSummary() {
                 fontSize = 15.sp,
                 fontFamily = SfPro
             )
-
             Spacer(Modifier.height(14.dp))
-
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceEvenly
@@ -250,9 +324,7 @@ fun SummaryItem(label: String, value: String, showDot: Boolean = false) {
                     modifier = Modifier
                         .size(12.dp)
                         .padding(end = 4.dp)
-                ) {
-                    drawCircle(color = SyntraGreen, style = Fill)
-                }
+                ) { drawCircle(color = SyntraGreen, style = Fill) }
             }
             Text(text = label, color = SyntraGray, fontSize = 13.sp, fontFamily = SfPro)
         }
@@ -266,9 +338,9 @@ fun SummaryItem(label: String, value: String, showDot: Boolean = false) {
     }
 }
 
-/* ====== BARRA DE NAVEGACIÓN INFERIOR ====== */
+/* ====== BARRA INFERIOR ====== */
 @Composable
-fun BottomNavBar() {
+fun BottomNavBar(navController: NavController, role: String) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
         color = Color.White,
@@ -281,46 +353,71 @@ fun BottomNavBar() {
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
+            // 🏠 HOME
             Icon(
                 painter = painterResource(id = R.drawable.ic_home),
                 contentDescription = "Home",
                 tint = Color.Black,
-                modifier = Modifier.size(26.dp)
+                modifier = Modifier
+                    .size(26.dp)
+                    .clickable { navController.navigate("main_page/$role") }
             )
+
+            // 🔍 MENÚ
             Icon(
                 painter = painterResource(id = R.drawable.ic_search),
                 contentDescription = "Search",
                 tint = SyntraGray,
-                modifier = Modifier.size(26.dp)
+                modifier = Modifier
+                    .size(26.dp)
+                    .clickable {
+                        if (role == "usuario") navController.navigate("menu_user")
+                        else navController.navigate("menu_transito")
+                    }
             )
 
-            // Botón central resaltado
+            // 🚦 CHATBOT
             Box(
                 modifier = Modifier
                     .size(64.dp)
                     .clip(CircleShape)
                     .background(SyntraDarkBlue)
-                    .padding(8.dp), // leve respiro interior
+                    .padding(8.dp)
+                    .clickable { navController.navigate("chatbot_screen/$role") },
                 contentAlignment = Alignment.Center
             ) {
                 Image(
                     painter = painterResource(id = R.drawable.ic_traffic_center),
-                    contentDescription = "Semáforo central",
+                    contentDescription = "Chatbot",
                     modifier = Modifier.size(70.dp)
                 )
             }
 
+
+            // ⏰ HISTORIAL
             Icon(
                 painter = painterResource(id = R.drawable.ic_history),
                 contentDescription = "History",
                 tint = SyntraGray,
-                modifier = Modifier.size(26.dp)
+                modifier = Modifier
+                    .size(26.dp)
+                    .clickable { navController.navigate("history_screen/$role") }
             )
+
+
+            // 👤 PERFIL
             Icon(
                 painter = painterResource(id = R.drawable.ic_profile),
                 contentDescription = "Profile",
                 tint = SyntraGray,
-                modifier = Modifier.size(26.dp)
+                modifier = Modifier
+                    .size(26.dp)
+                    .clickable {
+                        if (role == "usuario") navController.navigate("profile_user")
+                        else navController.navigate("profile_transito")
+
+
+                    }
             )
         }
     }

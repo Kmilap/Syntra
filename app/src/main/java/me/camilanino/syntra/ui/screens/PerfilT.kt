@@ -24,6 +24,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
+import androidx.navigation.NavController
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.launch
@@ -171,8 +172,10 @@ private fun BigHeader(
 /* ====== PERFIL DE TRÁNSITO CON FIREBASE ====== */
 @Composable
 fun ProfileScreenTransito(
+    navController: NavController,
     onForgotPassword: () -> Unit = {},
-    onLogout: () -> Unit = {}
+    onLogout: () -> Unit = {},
+    fromMenu: Boolean = false
 ) {
     val auth = FirebaseAuth.getInstance()
     val db = FirebaseFirestore.getInstance()
@@ -216,7 +219,15 @@ fun ProfileScreenTransito(
             .fillMaxSize()
             .background(SyntraWhite)
     ) {
-        BigHeader("Perfil tránsito")
+        BigHeader(
+            title = "Perfil tránsito",
+            onBack = {  if (fromMenu) {
+                navController.navigate("menu_transito")
+            } else {
+                navController.navigate("main_page/agente")
+            } }
+        )
+
 
         Column(
             modifier = Modifier

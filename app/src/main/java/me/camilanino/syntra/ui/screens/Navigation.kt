@@ -1,22 +1,21 @@
 package me.camilanino.syntra.ui.screens
 
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material3.Button
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
 import kotlinx.coroutines.tasks.await
+
 @Composable
 fun AppNavHost() {
     val nav = rememberNavController()
 
     NavHost(navController = nav, startDestination = "splash") {
 
+        // === SPLASH ===
         composable("splash") {
             SplashScreen(
                 onSplashFinished = {
@@ -27,13 +26,13 @@ fun AppNavHost() {
             )
         }
 
+        // === WELCOME ===
         composable("welcome") {
             WelcomeScreen(
                 onLoginUser = { nav.navigate("login_user") },
                 onLoginTransito = { nav.navigate("login_transito") }
             )
         }
-
 
         // === LOGIN USUARIO ===
         composable("login_user") {
@@ -43,7 +42,8 @@ fun AppNavHost() {
                     nav.navigate("verify_password")
                 },
                 onLoginSuccess = {
-                    nav.navigate("main_page_temp") {
+                    // 🔹 Navegamos pasando el rol de usuario
+                    nav.navigate("main_page/usuario") {
                         popUpTo("login_user") { inclusive = true }
                     }
                 },
@@ -52,6 +52,7 @@ fun AppNavHost() {
                 }
             )
         }
+
         // === VERIFICAR CONTRASEÑA (REAL) ===
         composable("verify_password") {
             VerificationScreen(
@@ -65,36 +66,30 @@ fun AppNavHost() {
                     }
                 },
                 onAfterSend = {
-                    // Cuando el correo se envía con éxito, volvemos al Login
                     nav.navigate("login_user") {
                         popUpTo("verify_password") { inclusive = true }
                     }
                 },
                 onBackClick = {
-                    // Si toca la flecha atrás, también volvemos al Login
-                    nav.popBackStack("login_user", inclusive = false)
-                }
-            )
-        }
-        // === REGISTRO USUARIO (REAL) ===
-        composable(route = "register_user") {
-            RegisterScreen(
-                onLoginNavigate = {
-                    // Cuando se registra o toca "¿Ya tienes cuenta?"
-                    nav.navigate("login_user") {
-                        popUpTo("register_user") { inclusive = true }
-                    }
-                },
-                onBackClick = {
-                    // Si toca la flecha atrás, también volvemos al Login
                     nav.popBackStack("login_user", inclusive = false)
                 }
             )
         }
 
-        composable("main_page_temp") {
-            androidx.compose.material3.Text("Main Page temporal")
+        // === REGISTRO USUARIO (REAL) ===
+        composable(route = "register_user") {
+            RegisterScreen(
+                onLoginNavigate = {
+                    nav.navigate("login_user") {
+                        popUpTo("register_user") { inclusive = true }
+                    }
+                },
+                onBackClick = {
+                    nav.popBackStack("login_user", inclusive = false)
+                }
+            )
         }
+
         // === LOGIN TRÁNSITO ===
         composable("login_transito") {
             LoginScreenT(
@@ -105,7 +100,8 @@ fun AppNavHost() {
                     nav.navigate("register_transito")
                 },
                 onLoginSuccess = {
-                    nav.navigate("main_page_t_temp") {
+                    // 🔹 Navegamos pasando el rol de agente
+                    nav.navigate("main_page/agente") {
                         popUpTo("login_transito") { inclusive = true }
                     }
                 },
@@ -114,6 +110,7 @@ fun AppNavHost() {
                 }
             )
         }
+
         // === VERIFICAR CONTRASEÑA (TRÁNSITO) ===
         composable("verify_password_t") {
             VerificationScreen(
@@ -127,29 +124,114 @@ fun AppNavHost() {
                     }
                 },
                 onAfterSend = {
-                    // Cuando el correo se envía con éxito, volvemos al Login de Tránsito
                     nav.navigate("login_transito") {
                         popUpTo("verify_password_t") { inclusive = true }
                     }
                 },
                 onBackClick = {
-                    // Si toca la flecha atrás, también volvemos al Login de Tránsito
                     nav.popBackStack("login_transito", inclusive = false)
                 }
             )
         }
+
         // === REGISTRO TRÁNSITO (REAL) ===
         composable("register_transito") {
             RegisterScreenT(
                 onLoginNavigate = {
-                    // Cuando se registra o toca "¿Ya tienes cuenta?"
                     nav.navigate("login_transito") {
                         popUpTo("register_transito") { inclusive = true }
                     }
                 },
                 onBackClick = {
-                    // Si toca la flecha atrás, también volvemos al Login de Tránsito
                     nav.popBackStack("login_transito", inclusive = false)
+                }
+            )
+        }
+
+        // === MAIN PAGE (COMPARTIDA) ===
+        composable(
+            route = "main_page/{role}",
+            arguments = listOf(navArgument("role") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val role = backStackEntry.arguments?.getString("role") ?: "usuario"
+            MainPage(navController = nav, role = role)
+        }
+
+
+        // === REPORTES SCREEN (COMPARTIDA) ===
+        composable(
+            route = "report_screen/{role}?fromMenu={fromMenu}&fromMap={fromMap}",
+            arguments = listOf(
+                navArgument("role") { type = NavType.StringType },
+                navArgument("fromMenu") {
+                    type = NavType.BoolType
+                    defaultValue = false
+                },
+                navArgument("fromMap") {
+                    type = NavType.BoolType
+                    defaultValue = false
+                }
+            )
+        ) { backStackEntry ->
+            val role = backStackEntry.arguments?.getString("role") ?: "usuario"
+            val fromMenu = backStackEntry.arguments?.getBoolean("fromMenu") ?: false
+            val fromMap = backStackEntry.arguments?.getBoolean("fromMap") ?: false
+
+            ReportesScreen(
+                navController = nav,
+                role = role,
+                fromMenu = fromMenu,
+                fromMap = fromMap
+            )
+        }
+
+
+
+        // === HISTORIAL SCREEN (COMPARTIDA) ===
+        composable(
+            route = "history_screen/{role}?fromMenu={fromMenu}&fromMap={fromMap}",
+            arguments = listOf(
+                navArgument("role") { type = NavType.StringType },
+                navArgument("fromMenu") {
+                    type = NavType.BoolType
+                    defaultValue = false
+                },
+                navArgument("fromMap") {
+                    type = NavType.BoolType
+                    defaultValue = false
+                }
+            )
+        ) { backStackEntry ->
+            val role = backStackEntry.arguments?.getString("role") ?: "usuario"
+            val fromMenu = backStackEntry.arguments?.getBoolean("fromMenu") ?: false
+            val fromMap = backStackEntry.arguments?.getBoolean("fromMap") ?: false
+            HistorialScreen(navController = nav, role = role, fromMenu = fromMenu, fromMap = fromMap)
+        }
+
+
+
+
+
+
+        // === PERFIL (USUARIO) ===
+        composable(
+            route = "profile_user?fromMenu={fromMenu}",
+            arguments = listOf(
+                navArgument("fromMenu") {
+                    type = NavType.BoolType
+                    defaultValue = false
+                }
+            )
+        ) { backStackEntry ->
+            val fromMenu = backStackEntry.arguments?.getBoolean("fromMenu") ?: false
+            ProfileScreenFirebase(
+                navController = nav,
+                fromMenu = fromMenu,
+                onForgotPassword = { nav.navigate("verify_password") },
+                onLogout = {
+                    nav.navigate("welcome") {
+                        popUpTo("main_page") { inclusive = true }
+                    }
                 }
             )
         }
@@ -157,14 +239,86 @@ fun AppNavHost() {
 
 
 
+        composable(
+            route = "profile_transito?fromMenu={fromMenu}",
+            arguments = listOf(
+                navArgument("fromMenu") {
+                    type = NavType.BoolType
+                    defaultValue = false
+                }
+            )
+        ) { backStackEntry ->
+            val fromMenu = backStackEntry.arguments?.getBoolean("fromMenu") ?: false
+            ProfileScreenTransito(
+                navController = nav,
+                fromMenu = fromMenu,
+                onForgotPassword = { nav.navigate("verify_password") },
+                onLogout = {
+                    nav.navigate("welcome") {
+                        popUpTo("main_page") { inclusive = true }
+                    }
+                }
+            )
+        }
 
 
+        // === CHATBOT (COMPARTIDO) ===
+        composable(
+            route = "chatbot_screen/{role}?fromMenu={fromMenu}",
+            arguments = listOf(
+                navArgument("role") { type = NavType.StringType },
+                navArgument("fromMenu") {
+                    type = NavType.BoolType
+                    defaultValue = false
+                }
+            )
+        ) { backStackEntry ->
+            val role = backStackEntry.arguments?.getString("role") ?: "usuario"
+            val fromMenu = backStackEntry.arguments?.getBoolean("fromMenu") ?: false
+            ChatbotScreen(navController = nav, role = role, fromMenu = fromMenu)
+        }
+
+        // === MAPA SCREEN (COMPARTIDA) ===
+        composable(
+            route = "mapa_screen/{role}?fromMenu={fromMenu}",
+            arguments = listOf(
+                navArgument("role") { type = NavType.StringType },
+                navArgument("fromMenu") {
+                    type = NavType.BoolType
+                    defaultValue = false
+                }
+            )
+        ) { backStackEntry ->
+            val role = backStackEntry.arguments?.getString("role") ?: "usuario"
+            val fromMenu = backStackEntry.arguments?.getBoolean("fromMenu") ?: false
+            MapaScreen(navController = nav, role = role, fromMenu = fromMenu)
+        }
 
 
+// === ESTADÍSTICAS (EXCLUSIVA DE TRÁNSITO) ===
+        composable(
+            route = "estadisticas_screen/{role}",
+            arguments = listOf(navArgument("role") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val role = backStackEntry.arguments?.getString("role") ?: "agente"
+            EstadisticasScreen(navController = nav)
+        }
 
-// === MAIN PAGE TRÁNSITO (TEMPORAL) ===
-        composable("main_page_t_temp") {
-            Text("Main Page Tránsito temporal")
+
+        // === FEEDBACK SCREEN (COMPARTIDA) ===
+        composable(
+            route = "feedback_screen/{role}?fromMenu={fromMenu}",
+            arguments = listOf(
+                navArgument("role") { type = NavType.StringType },
+                navArgument("fromMenu") {
+                    type = NavType.BoolType
+                    defaultValue = false
+                }
+            )
+        ) { backStackEntry ->
+            val role = backStackEntry.arguments?.getString("role") ?: "usuario"
+            val fromMenu = backStackEntry.arguments?.getBoolean("fromMenu") ?: false
+            FeedbackPage(navController = nav, role = role, fromMenu = fromMenu)
         }
 
 
@@ -174,5 +328,14 @@ fun AppNavHost() {
 
 
 
+
+        // === MENÚS ===
+        composable("menu_user") {
+            Menu(navController = nav) // 🔹 reemplazo del placeholder
+        }
+
+        composable("menu_transito") {
+            MenuT(navController = nav) // 🔹 reemplazo del placeholder
+        }
     }
 }

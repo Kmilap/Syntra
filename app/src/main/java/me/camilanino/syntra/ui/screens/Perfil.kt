@@ -24,6 +24,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
+import androidx.navigation.NavController
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.launch
@@ -182,8 +183,11 @@ private fun BigHeader(
 /* ====== Pantalla de Perfil conectada a Firebase ====== */
 @Composable
 fun ProfileScreenFirebase(
+    navController: NavController,
+    fromMenu: Boolean = false,
     onForgotPassword: () -> Unit = {},
     onLogout: () -> Unit = {}
+
 ) {
     val auth = FirebaseAuth.getInstance()
     val db = FirebaseFirestore.getInstance()
@@ -230,7 +234,19 @@ fun ProfileScreenFirebase(
             .fillMaxSize()
             .background(SyntraWhite)
     ) {
-        BigHeader("Perfil")
+        BigHeader(
+            title = "Perfil",
+            onBack = {
+                if (fromMenu) {
+                    navController.navigate("menu_user")
+                } else {
+                    navController.navigate("main_page/usuario")
+                }
+            }
+        )
+
+
+
 
         Column(
             modifier = Modifier

@@ -5,7 +5,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.ArrowBack
@@ -22,9 +21,9 @@ import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.navigation.NavController
 import me.camilanino.syntra.R
 
 /* ====== FUENTES Y COLORES ====== */
@@ -38,10 +37,19 @@ private val SyntraYellow = Color(0xFFFFC048)
 private val SyntraRed = Color(0xFFE74C3C)
 private val SyntraDarkBlue = Color(0xFF273746)
 
-@Preview(showBackground = true)
+/* ====== REPORTES SCREEN ====== */
 @Composable
-fun ReportesScreen() {
+fun ReportesScreen(
+    navController: NavController,
+    role: String,
+    fromMenu: Boolean = false,
+    fromMap: Boolean = false) {
     var selectedEstado by remember { mutableStateOf("Operativo") }
+
+    // Solo para depuración (ver en logcat)
+    LaunchedEffect(role) {
+        println("Rol detectado en ReportesScreen: $role")
+    }
 
     Column(
         modifier = Modifier
@@ -60,8 +68,37 @@ fun ReportesScreen() {
                 imageVector = Icons.Outlined.ArrowBack,
                 contentDescription = "Atrás",
                 tint = Color.Black,
-                modifier = Modifier.size(22.dp)
+                modifier = Modifier
+                    .size(22.dp)
+                    .clickable {
+                        when {
+                            // 🔹 Si vino desde el mapa, regresa al mapa
+                            fromMap -> {
+                                navController.navigate("mapa_screen/$role?fromMenu=false&fromMap=true")
+                            }
+
+                            // 🔹 Si vino directamente del menú, regresa al menú
+                            fromMenu -> {
+                                if (role == "usuario") {
+                                    navController.navigate("menu_user")
+                                } else {
+                                    navController.navigate("menu_transito")
+                                }
+                            }
+
+                            // 🔹 En cualquier otro caso, regresa al MainPage según rol
+                            else -> {
+                                if (role == "usuario") {
+                                    navController.navigate("main_page/usuario")
+                                } else {
+                                    navController.navigate("main_page/agente")
+                                }
+                            }
+                        }
+                    }
             )
+
+
             Spacer(modifier = Modifier.width(10.dp))
             Text(
                 text = "Reportar semáforo",
@@ -71,7 +108,6 @@ fun ReportesScreen() {
                 fontFamily = SfProRounded
             )
         }
-
 
         Spacer(modifier = Modifier.height(28.dp))
 
@@ -180,11 +216,10 @@ fun ReportesScreen() {
         }
 
         Spacer(modifier = Modifier.weight(1f))
-
-        BottomNavBar()
     }
 }
 
+/* ====== COMPONENTE DE BOTONES ====== */
 @Composable
 fun EstadoButton(label: String, color: Color, selected: String, onSelect: (String) -> Unit) {
     val isSelected = selected == label

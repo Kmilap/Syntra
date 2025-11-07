@@ -28,6 +28,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.navigation.NavController
 import kotlinx.coroutines.delay
 import me.camilanino.syntra.R
 
@@ -44,9 +45,10 @@ private val SyntraGreen = Color(0xFF63B58D)
 private val SyntraYellow = Color(0xFFE0B94A)
 private val SyntraOrange = Color(0xFFE74C3C)
 
+
 /* ====== PANTALLA ESTADÍSTICAS ====== */
 @Composable
-fun EstadisticasScreen() {
+fun EstadisticasScreen(navController: NavController) {
     var visible by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
@@ -65,7 +67,9 @@ fun EstadisticasScreen() {
                 .verticalScroll(rememberScrollState())
         ) {
             // Encabezado rojo
-            EstadisticasHeader()
+            EstadisticasHeader(
+                onBackClick = { navController.navigate("menu_transito") }
+            )
 
             AnimatedVisibility(visible = visible) {
                 Column(
@@ -90,25 +94,16 @@ fun EstadisticasScreen() {
                 }
             }
         }
-
-        // Barra inferior fija al fondo
-        Box(
-            modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .fillMaxWidth()
-        ) {
-            BottomNavBar()
-        }
     }
 }
 
-/* ====== ENCABEZADO CURVADO Y DEGRADADO ====== */
+    /* ====== ENCABEZADO CON FLECHA FUNCIONAL ====== */
 @Composable
-fun EstadisticasHeader() {
+fun EstadisticasHeader(onBackClick: () -> Unit) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .height(190.dp) // un poco más alto para que respire mejor
+            .height(190.dp)
             .clip(RoundedCornerShape(bottomStart = 24.dp, bottomEnd = 24.dp))
             .background(
                 brush = Brush.verticalGradient(
@@ -116,21 +111,27 @@ fun EstadisticasHeader() {
                 )
             )
     ) {
-        // Contenido centrado verticalmente
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .align(Alignment.Center) // <-- centra el contenido dentro del header
-                .padding(horizontal = 20.dp, vertical = 6.dp), // ligero margen interno
+                .align(Alignment.Center)
+                .padding(horizontal = 20.dp, vertical = 6.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Icon(
-                imageVector = Icons.Outlined.ArrowBack,
-                contentDescription = "Atrás",
-                tint = Color.White,
-                modifier = Modifier.size(26.dp)
-            )
+            IconButton(
+                onClick = onBackClick,
+                modifier = Modifier
+                    .size(36.dp)
+                    .background(Color.White.copy(alpha = 0.2f), RoundedCornerShape(10.dp))
+            ) {
+                Icon(
+                    imageVector = Icons.Outlined.ArrowBack,
+                    contentDescription = "Atrás",
+                    tint = Color.White,
+                    modifier = Modifier.size(24.dp)
+                )
+            }
 
             Text(
                 text = "Estadísticas",
@@ -149,6 +150,7 @@ fun EstadisticasHeader() {
         }
     }
 }
+
 
 /* ====== TARJETA PRINCIPAL ====== */
 @Composable

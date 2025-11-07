@@ -21,6 +21,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.res.painterResource
+import androidx.navigation.NavController
 import kotlinx.coroutines.launch
 import me.camilanino.syntra.R
 
@@ -37,12 +38,15 @@ private val SyntraGreen    = Color(0xFF63B58D)
 private val SyntraDarkBlue = Color(0xFF273746)
 
 /* =================================================================================
- * PANTALLA FEEDBACK (con borrar + deshacer)
+ * PANTALLA FEEDBACK
  * ================================================================================= */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FeedbackPage(
     onBack: () -> Unit = {},
+    navController: NavController,
+    role: String,
+    fromMenu: Boolean = false,
     // Si quieres usar tu BottomNavBar() original, cambia esta línea a: bottomBar = { BottomNavBar() }
     bottomBar: @Composable () -> Unit = { FeedbackBottomNavBar() }
 ) {
@@ -65,9 +69,20 @@ fun FeedbackPage(
                     )
                 },
                 navigationIcon = {
-                    IconButton(onClick = onBack) {
+                    IconButton(onClick = {
+                        if (fromMenu) {
+                            if (role == "usuario") {
+                                navController.navigate("menu_user")
+                            } else {
+                                navController.navigate("menu_transito")
+                            }
+                        } else {
+                            navController.navigate("main_page/$role")
+                        }
+                    }) {
                         Icon(Icons.Outlined.ArrowBack, contentDescription = "Volver")
                     }
+
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = SyntraWhite
@@ -75,7 +90,7 @@ fun FeedbackPage(
             )
         },
         snackbarHost = { SnackbarHost(snackbarHostState) },
-        bottomBar = bottomBar
+
     ) { padding ->
         Column(
             modifier = Modifier

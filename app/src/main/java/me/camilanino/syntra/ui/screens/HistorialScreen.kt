@@ -4,6 +4,7 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -23,7 +24,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.navigation.NavController
 import me.camilanino.syntra.R
+
 
 /* ====== FUENTES ====== */
 private val SfProRounded = FontFamily(Font(R.font.sf_pro_rounded_regular))
@@ -56,7 +59,12 @@ private val listaReportes = listOf(
 
 /* ====== HISTORIAL SCREEN ====== */
 @Composable
-fun HistorialScreen() {
+fun HistorialScreen(navController: androidx.navigation.NavController,role: String, fromMenu: Boolean = false, fromMap: Boolean = false) {
+
+    LaunchedEffect(role) {
+        println("Rol detectado en HistorialScreen: $role")
+    }
+
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -68,7 +76,7 @@ fun HistorialScreen() {
                 .padding(horizontal = 20.dp)
         ) {
             Spacer(Modifier.height(36.dp))
-            TopHistorialBar()
+            TopHistorialBar(navController, role, fromMenu,fromMap)
             Spacer(Modifier.height(22.dp))
             SearchBar()
             Spacer(Modifier.height(20.dp))
@@ -81,14 +89,15 @@ fun HistorialScreen() {
                 .align(Alignment.BottomCenter)
                 .fillMaxWidth()
         ) {
-            BottomNavBar()
+
         }
     }
 }
 
+
 /* ====== TOP BAR ====== */
 @Composable
-fun TopHistorialBar() {
+fun TopHistorialBar(navController: NavController, role: String, fromMenu: Boolean = false,fromMap: Boolean= false ) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -101,8 +110,32 @@ fun TopHistorialBar() {
                 painter = painterResource(id = R.drawable.ic_back),
                 contentDescription = "Volver",
                 tint = Color.Black,
-                modifier = Modifier.size(28.dp)
+                modifier = Modifier
+                    .size(28.dp)
+                    .clickable {
+                        when {
+                            fromMap -> {
+                                navController.navigate("mapa_screen/$role?fromMenu=true") {
+                                    popUpTo("history_screen/$role") { inclusive = true }
+                                }
+                            }
+                            fromMenu -> {
+                                val destino = if (role == "usuario") "menu_user" else "menu_transito"
+                                navController.navigate(destino) {
+                                    popUpTo("history_screen/$role") { inclusive = true }
+                                }
+                            }
+                            else -> {
+                                navController.navigate("main_page/$role") {
+                                    popUpTo("history_screen/$role") { inclusive = true }
+                                }
+                            }
+                        }
+                    }
+
             )
+
+
             Spacer(Modifier.width(12.dp))
             Text(
                 text = "Historial",
@@ -121,6 +154,7 @@ fun TopHistorialBar() {
         )
     }
 }
+
 
 /* ====== SEARCH BAR ====== */
 @Composable
