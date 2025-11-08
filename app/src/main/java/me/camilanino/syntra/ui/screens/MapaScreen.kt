@@ -1,6 +1,5 @@
 package me.camilanino.syntra.ui.screens
 
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
@@ -11,8 +10,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -20,6 +17,15 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import me.camilanino.syntra.R
+
+// ==== IMPORTS DE MAPS ====
+import com.google.android.gms.maps.model.CameraPosition
+import com.google.android.gms.maps.model.LatLng
+import com.google.maps.android.compose.GoogleMap
+import com.google.maps.android.compose.Marker
+import com.google.maps.android.compose.MarkerState
+import com.google.maps.android.compose.rememberCameraPositionState
+
 
 /* ====== FUENTES ====== */
 private val SfPro = FontFamily(Font(R.font.sf_pro))
@@ -31,37 +37,51 @@ private val SyntraYellow = Color(0xFFE3C04D)
 private val SyntraGreen = Color(0xFF63B58D)
 private val SyntraGray = Color(0xFF6C7278)
 
+
 @Composable
-fun MapaScreen(navController: NavController, role: String, fromMenu: Boolean = false, fromMap: Boolean = false) {
+fun MapaScreen(
+    navController: NavController,
+    role: String,
+    fromMenu: Boolean = false,
+    fromMap: Boolean = false
+) {
     Box(modifier = Modifier.fillMaxSize()) {
-        // === Fondo del mapa ===
-        Image(
-            painter = painterResource(id = R.drawable.mapita2), // cambia por el nombre real del archivo
-            contentDescription = "Mapa base",
-            contentScale = ContentScale.Crop,
-            modifier = Modifier.fillMaxSize()
-        )
+
+        // === MAPA REAL ===
+        val santanderCenter = LatLng(7.1254, -73.1198) // Bucaramanga
+        val cameraPositionState = rememberCameraPositionState {
+            position = CameraPosition.fromLatLngZoom(santanderCenter, 14f)
+        }
+
+        GoogleMap(
+            modifier = Modifier.fillMaxSize(),
+            cameraPositionState = cameraPositionState
+        ) {
+            // Marcador de ejemplo
+            Marker(
+                state = MarkerState(position = santanderCenter),
+                title = "Centro de Bucaramanga",
+                snippet = "Ejemplo de marcador inicial"
+            )
+        }
 
         // === Flecha de retroceso funcional ===
         IconButton(
             onClick = {
                 if (fromMenu) {
-                    // Si viene desde el menú
                     if (role == "usuario") {
                         navController.navigate("menu_user")
                     } else {
                         navController.navigate("menu_transito")
                     }
                 } else {
-                    // Si viniera desde otro lado (por si acaso)
                     if (role == "usuario") {
                         navController.navigate("main_page/usuario")
                     } else {
                         navController.navigate("main_page/agente")
                     }
                 }
-            }
-            ,
+            },
             modifier = Modifier
                 .padding(start = 14.dp, top = 24.dp)
                 .size(38.dp)
@@ -69,7 +89,7 @@ fun MapaScreen(navController: NavController, role: String, fromMenu: Boolean = f
                 .background(Color.White.copy(alpha = 0.85f), RoundedCornerShape(12.dp))
         ) {
             Icon(
-                painter = painterResource(id = R.drawable.ic_back),
+                painter = androidx.compose.ui.res.painterResource(id = R.drawable.ic_back),
                 contentDescription = "Volver",
                 tint = Color.Black,
                 modifier = Modifier.size(22.dp)
@@ -96,7 +116,6 @@ fun MapaScreen(navController: NavController, role: String, fromMenu: Boolean = f
                 EstadoItem(color = SyntraGreen, estado = "Operativo", ubicacion = "Av. Juárez y Calle 1")
 
                 Spacer(Modifier.height(12.dp))
-
 
                 // === Botones inferiores ===
                 Row(
@@ -140,9 +159,7 @@ fun MapaScreen(navController: NavController, role: String, fromMenu: Boolean = f
                             color = Color.Black
                         )
                     }
-
                 }
-
             }
         }
     }
