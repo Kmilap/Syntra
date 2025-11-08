@@ -30,7 +30,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import androidx.compose.runtime.rememberCoroutineScope
 import me.camilanino.syntra.R
+import me.camilanino.syntra.ui.screens.ReportRepository
+import me.camilanino.syntra.ui.screens.ReportStats   // ⬅ importa ReportStats
 
 /* ====== FUENTES Y COLORES ====== */
 private val SfProRounded = FontFamily(Font(R.font.sf_pro_rounded_regular))
@@ -45,15 +49,30 @@ private val SyntraGreen = Color(0xFF63B58D)
 private val SyntraYellow = Color(0xFFE0B94A)
 private val SyntraOrange = Color(0xFFE74C3C)
 
-
-/* ====== PANTALLA ESTADÍSTICAS ====== */
+/* ====== PANTALLA ESTADÍSTICAS (datos reales) ====== */
 @Composable
 fun EstadisticasScreen(navController: NavController) {
+    val scope = rememberCoroutineScope()
     var visible by remember { mutableStateOf(false) }
+    var loading by remember { mutableStateOf(true) }
+    var error by remember { mutableStateOf<String?>(null) }
+    var stats by remember { mutableStateOf(ReportStats()) }
 
+    // Carga inicial
     LaunchedEffect(Unit) {
         delay(150)
         visible = true
+        scope.launch {
+            loading = true
+            error = null
+            val res = ReportRepository.getReportStats()
+            if (res.isSuccess) {
+                stats = res.getOrThrow()
+            } else {
+                error = res.exceptionOrNull()?.message ?: "Error desconocido"
+            }
+            loading = false
+        }
     }
 
     Box(
@@ -79,7 +98,12 @@ fun EstadisticasScreen(navController: NavController) {
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Spacer(modifier = Modifier.height(28.dp))
-                    ReportesActivosCard()
+
+                    // Tarjeta principal: Reportes activos (inspección + urgentes)
+                    ReportesActivosCard(
+                        activos = stats.active
+                    )
+
                     Spacer(modifier = Modifier.height(34.dp))
 
                     Divider(
@@ -89,15 +113,40 @@ fun EstadisticasScreen(navController: NavController) {
                     )
 
                     Spacer(modifier = Modifier.height(22.dp))
-                    EstadisticasCardsRow()
+
+                    // Tarjetas inferiores (dinámicas)
+                    EstadisticasCardsRow(
+                        fixedPercent = stats.fixedPercent,
+                        inspection = stats.inspection,   // ⬅ ahora usamos inspección
+                        urgent = stats.urgent
+                    )
+
                     Spacer(modifier = Modifier.height(40.dp))
                 }
             }
         }
+
+        if (loading) {
+            CircularProgressIndicator(
+                modifier = Modifier.align(Alignment.Center),
+                color = SyntraRed
+            )
+        }
+
+        error?.let {
+            Text(
+                text = "Error cargando estadísticas: $it",
+                color = SyntraOrange,
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(16.dp),
+                fontSize = 13.sp
+            )
+        }
     }
 }
 
-    /* ====== ENCABEZADO CON FLECHA FUNCIONAL ====== */
+/* ====== ENCABEZADO CON FLECHA ====== */
 @Composable
 fun EstadisticasHeader(onBackClick: () -> Unit) {
     Box(
@@ -151,10 +200,9 @@ fun EstadisticasHeader(onBackClick: () -> Unit) {
     }
 }
 
-
-/* ====== TARJETA PRINCIPAL ====== */
+/* ====== TARJETA PRINCIPAL (dinámica) ====== */
 @Composable
-fun ReportesActivosCard() {
+fun ReportesActivosCard(activos: Int) {
     var pressed by remember { mutableStateOf(false) }
     val scale by animateFloatAsState(
         targetValue = if (pressed) 0.97f else 1f,
@@ -191,7 +239,7 @@ fun ReportesActivosCard() {
 
             Column(horizontalAlignment = Alignment.Start) {
                 Text(
-                    text = "12",
+                    text = activos.toString(),
                     fontFamily = SfProRounded,
                     fontWeight = FontWeight.Bold,
                     fontSize = 48.sp,
@@ -211,33 +259,40 @@ fun ReportesActivosCard() {
 
 /* ====== TARJETAS INFERIORES ====== */
 @Composable
-fun EstadisticasCardsRow() {
+fun EstadisticasCardsRow(
+    fixedPercent: Int,
+    inspection: Int,     // 🔸 ahora representa los semáforos en inspección
+    urgent: Int
+) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 6.dp),
         horizontalArrangement = Arrangement.spacedBy(10.dp)
     ) {
+        // Verde — porcentaje de semáforos arreglados
         EstadisticaItem(
             titulo = "Estado de los semáforos",
-            valor = "30%",
-            subtitulo = "Arreglado",
+            valor = "${fixedPercent}%",
+            subtitulo = "Arreglados",
             colorValor = SyntraGreen,
             icono = R.drawable.ic_circle_green,
             modifier = Modifier.weight(1f)
         )
+        // Amarillo — semáforos en inspección
         EstadisticaItem(
-            titulo = "Reportes Solucionados",
-            valor = "7",
-            subtitulo = "Este semestre",
+            titulo = "Semáforos en inspección",
+            valor = inspection.toString(),
+            subtitulo = "Actualmente",
             colorValor = SyntraYellow,
             icono = R.drawable.ic_circle_yellow,
             modifier = Modifier.weight(1f)
         )
+        // Rojo — reportes urgentes
         EstadisticaItem(
             titulo = "Reportes de atención urgente",
-            valor = "24",
-            subtitulo = "Actualmente",
+            valor = urgent.toString(),
+            subtitulo = "Activos",
             colorValor = SyntraOrange,
             icono = R.drawable.ic_circle_red,
             modifier = Modifier.weight(1f)

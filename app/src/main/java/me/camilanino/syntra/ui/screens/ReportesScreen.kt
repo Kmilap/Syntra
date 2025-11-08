@@ -1,11 +1,15 @@
 package me.camilanino.syntra.ui.screens
 
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.Attachment
@@ -16,15 +20,29 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import coil.compose.AsyncImage
+import kotlinx.coroutines.launch
 import me.camilanino.syntra.R
+import me.camilanino.syntra.ui.screens.ReportRepository
+
+/* ====== (Opcional) Activa Coil si quieres miniaturas ====
+   1) build.gradle (app): implementation("io.coil-kt:coil-compose:2.6.0")
+   2) descomenta los imports y el bloque de previews más abajo
+*/
+// import coil.compose.AsyncImage
+// import androidx.compose.foundation.layout.Arrangement
+// import androidx.compose.foundation.layout.FlowRow
 
 /* ====== FUENTES Y COLORES ====== */
 private val SfProRounded = FontFamily(Font(R.font.sf_pro_rounded_regular))
@@ -35,20 +53,33 @@ private val SyntraGray = Color(0xFF6C7278)
 private val SyntraGreen = Color(0xFF63B58D)
 private val SyntraYellow = Color(0xFFFFC048)
 private val SyntraRed = Color(0xFFE74C3C)
-private val SyntraDarkBlue = Color(0xFF273746)
 
-/* ====== REPORTES SCREEN ====== */
+/* ====== SCREEN ====== */
 @Composable
 fun ReportesScreen(
     navController: NavController,
     role: String,
     fromMenu: Boolean = false,
-    fromMap: Boolean = false) {
-    var selectedEstado by remember { mutableStateOf("Operativo") }
+    fromMap: Boolean = false
+) {
+    val scope = rememberCoroutineScope()
 
-    // Solo para depuración (ver en logcat)
-    LaunchedEffect(role) {
-        println("Rol detectado en ReportesScreen: $role")
+    var selectedEstado by remember { mutableStateOf("Operativo") }
+    var address by remember { mutableStateOf("") }
+    var description by remember { mutableStateOf("") }
+    var latLng: Pair<Double, Double>? by remember { mutableStateOf(null) } // ubicación standby
+
+    // fotos seleccionadas (se eligen con el icono del campo DESCRIPCIÓN)
+    var selectedPhotos by remember { mutableStateOf<List<Uri>>(emptyList()) }
+
+    var loading by remember { mutableStateOf(false) }
+    var statusMsg by remember { mutableStateOf<String?>(null) }
+
+    // Picker múltiple de imágenes
+    val pickImagesLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetMultipleContents()
+    ) { uris ->
+        selectedPhotos = uris.take(6) // límite opcional
     }
 
     Column(
@@ -72,33 +103,12 @@ fun ReportesScreen(
                     .size(22.dp)
                     .clickable {
                         when {
-                            // 🔹 Si vino desde el mapa, regresa al mapa
-                            fromMap -> {
-                                navController.navigate("mapa_screen/$role?fromMenu=false&fromMap=true")
-                            }
-
-                            // 🔹 Si vino directamente del menú, regresa al menú
-                            fromMenu -> {
-                                if (role == "usuario") {
-                                    navController.navigate("menu_user")
-                                } else {
-                                    navController.navigate("menu_transito")
-                                }
-                            }
-
-                            // 🔹 En cualquier otro caso, regresa al MainPage según rol
-                            else -> {
-                                if (role == "usuario") {
-                                    navController.navigate("main_page/usuario")
-                                } else {
-                                    navController.navigate("main_page/agente")
-                                }
-                            }
+                            fromMap -> navController.navigate("mapa_screen/$role?fromMenu=false&fromMap=true")
+                            fromMenu -> if (role == "usuario") navController.navigate("menu_user") else navController.navigate("menu_transito")
+                            else -> if (role == "usuario") navController.navigate("main_page/usuario") else navController.navigate("main_page/agente")
                         }
                     }
             )
-
-
             Spacer(modifier = Modifier.width(10.dp))
             Text(
                 text = "Reportar semáforo",
@@ -109,7 +119,7 @@ fun ReportesScreen(
             )
         }
 
-        Spacer(modifier = Modifier.height(28.dp))
+        Spacer(modifier = Modifier.height(20.dp))
 
         /* ====== IMAGEN ====== */
         Image(
@@ -121,15 +131,15 @@ fun ReportesScreen(
                 .height(220.dp)
         )
 
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(16.dp))
 
-        /* ====== CAMPO UBICACIÓN ====== */
+        /* ====== UBICACIÓN (standby) ====== */
         OutlinedTextField(
-            value = "",
-            onValueChange = {},
+            value = address,
+            onValueChange = { address = it },
             placeholder = {
                 Text(
-                    text = "Ubicación",
+                    text = "Ubicación (ej. Cabecera, Bucaramanga)",
                     fontFamily = SfPro,
                     color = SyntraGray.copy(alpha = 0.6f)
                 )
@@ -137,23 +147,32 @@ fun ReportesScreen(
             trailingIcon = {
                 Icon(
                     imageVector = Icons.Outlined.LocationOn,
-                    contentDescription = null,
-                    tint = SyntraBlue
+                    contentDescription = "Ubicación (standby)",
+                    tint = SyntraBlue,
+                    modifier = Modifier.clickable {
+                        // Activar más adelante con Maps/Places:
+                        // address = "Cabecera, Bucaramanga"
+                        // latLng = 7.119349 to -73.122741
+                    }
                 )
             },
             modifier = Modifier
                 .fillMaxWidth()
                 .height(56.dp)
                 .clip(RoundedCornerShape(14.dp)),
+            keyboardOptions = KeyboardOptions(
+                keyboardType = KeyboardType.Text,
+                imeAction = ImeAction.Next
+            ),
             colors = OutlinedTextFieldDefaults.colors(
                 focusedBorderColor = SyntraBlue,
                 unfocusedBorderColor = SyntraGray.copy(alpha = 0.4f)
             )
         )
 
-        Spacer(modifier = Modifier.height(22.dp))
+        Spacer(modifier = Modifier.height(18.dp))
 
-        /* ====== BOTONES DE ESTADO ====== */
+        /* ====== ESTADOS ====== */
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween
@@ -163,12 +182,12 @@ fun ReportesScreen(
             EstadoButton("Falla crítico", SyntraRed, selectedEstado) { selectedEstado = it }
         }
 
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(18.dp))
 
-        /* ====== CAMPO DESCRIPCIÓN ====== */
+        /* ====== DESCRIPCIÓN (el clip abre el picker) ====== */
         OutlinedTextField(
-            value = "",
-            onValueChange = {},
+            value = description,
+            onValueChange = { description = it },
             placeholder = {
                 Text(
                     text = "Describe en detalle el problema del semáforo actualmente",
@@ -180,25 +199,108 @@ fun ReportesScreen(
             leadingIcon = {
                 Icon(
                     imageVector = Icons.Outlined.Attachment,
-                    contentDescription = null,
-                    tint = SyntraGray
+                    contentDescription = "Adjuntar fotos",
+                    tint = SyntraGray,
+                    modifier = Modifier.clickable {
+                        // abre el selector de fotos
+                        pickImagesLauncher.launch("image/*")
+                    }
                 )
+            },
+            // si prefieres que el usuario vea cuántas hay, puedes usar trailingIcon:
+            trailingIcon = {
+                if (selectedPhotos.isNotEmpty()) {
+                    Text(
+                        text = "${selectedPhotos.size}",
+                        color = SyntraBlue,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
             },
             modifier = Modifier
                 .fillMaxWidth()
                 .height(150.dp)
                 .clip(RoundedCornerShape(14.dp)),
+            keyboardOptions = KeyboardOptions(
+                keyboardType = KeyboardType.Text,
+                imeAction = ImeAction.Default
+            ),
             colors = OutlinedTextFieldDefaults.colors(
                 focusedBorderColor = SyntraBlue,
                 unfocusedBorderColor = SyntraGray.copy(alpha = 0.4f)
             )
         )
 
-        Spacer(modifier = Modifier.height(30.dp))
+
+        if (selectedPhotos.isNotEmpty()) {
+            Spacer(Modifier.height(8.dp))
+            FlowRow(
+                maxItemsInEachRow = 3,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                selectedPhotos.forEach { uri ->
+                    AsyncImage(
+                        model = uri,
+                        contentDescription = null,
+                        modifier = Modifier
+                            .size(84.dp)
+                            .clip(RoundedCornerShape(12.dp))
+                            .border(1.dp, SyntraGray.copy(alpha = 0.3f), RoundedCornerShape(12.dp))
+                    )
+                }
+            }
+        }
+
+
+        Spacer(modifier = Modifier.height(18.dp))
 
         /* ====== BOTÓN REPORTAR ====== */
         Button(
-            onClick = {},
+            onClick = {
+                scope.launch {
+                    if (address.isBlank() || description.isBlank()) {
+                        statusMsg = "Completa la ubicación y la descripción."
+                        return@launch
+                    }
+                    loading = true
+
+                    // 1) Crear reporte
+                    val res = ReportRepository.createReport(
+                        address = address,
+                        lat = latLng?.first,
+                        lng = latLng?.second,
+                        statusUi = selectedEstado,
+                        description = description,
+                        role = role
+                    )
+
+                    // 2) Subir fotos si hay
+                    if (res.isSuccess) {
+                        val reportId = res.getOrNull()!!
+                        if (selectedPhotos.isNotEmpty()) {
+                            val up = ReportRepository.uploadReportPhotos(reportId, selectedPhotos)
+                            up.onFailure { e ->
+                                statusMsg = "Reporte creado, pero fotos fallaron: ${e.message}"
+                            }
+                        }
+                        statusMsg = "Reporte enviado ✅"
+
+                        // 3) Limpiar UI
+                        selectedEstado = "Operativo"
+                        address = ""
+                        description = ""
+                        latLng = null
+                        selectedPhotos = emptyList()
+                    } else {
+                        statusMsg = "Error: ${res.exceptionOrNull()?.message}"
+                    }
+
+                    loading = false
+                }
+            },
+            enabled = !loading,
             modifier = Modifier
                 .fillMaxWidth()
                 .height(52.dp),
@@ -207,12 +309,17 @@ fun ReportesScreen(
             elevation = ButtonDefaults.buttonElevation(defaultElevation = 4.dp)
         ) {
             Text(
-                text = "Reportar",
+                text = if (loading) "Enviando..." else "Reportar",
                 color = Color.White,
                 fontWeight = FontWeight.SemiBold,
                 fontFamily = SfPro,
                 fontSize = 16.sp
             )
+        }
+
+        statusMsg?.let {
+            Spacer(Modifier.height(8.dp))
+            Text(it, color = Color.DarkGray, fontSize = 13.sp)
         }
 
         Spacer(modifier = Modifier.weight(1f))

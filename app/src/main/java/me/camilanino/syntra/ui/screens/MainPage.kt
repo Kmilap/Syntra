@@ -39,15 +39,12 @@ private val SyntraGray   = Color(0xFF6C7278)
 private val SyntraGreen  = Color(0xFF63B58D)
 private val SyntraDarkBlue = Color(0xFF273746)
 
-
-
-
 /* ====== MAIN PAGE ====== */
 @Composable
 fun MainPage(navController: NavController, role: String) {
     var userRole by remember { mutableStateOf("usuario") } // por defecto
 
-    // 🔹 Detecta el rol desde Firestore
+    // 🔹 Detectar el rol desde Firestore
     LaunchedEffect(Unit) {
         val uid = FirebaseAuth.getInstance().currentUser?.uid
         val db = FirebaseFirestore.getInstance()
@@ -67,7 +64,6 @@ fun MainPage(navController: NavController, role: String) {
         }
     }
 
-
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -77,7 +73,7 @@ fun MainPage(navController: NavController, role: String) {
         Spacer(Modifier.height(26.dp))
         MainContent(navController)
         Spacer(Modifier.height(36.dp))
-        ReportSummary()
+        ReportSummary()   // 🔹 ahora dinámico
         Spacer(modifier = Modifier.weight(1f))
         BottomNavBar(navController, userRole)
     }
@@ -152,10 +148,8 @@ fun TopSection() {
 }
 
 /* ====== CONTENIDO CENTRAL ====== */
-/* ====== CONTENIDO CENTRAL ====== */
 @Composable
 fun MainContent(navController: NavController) {
-    // Detectamos el rol desde Firebase igual que arriba
     var userRole by remember { mutableStateOf("usuario") }
 
     LaunchedEffect(Unit) {
@@ -217,11 +211,8 @@ fun MainContent(navController: NavController) {
 
         Spacer(Modifier.height(26.dp))
 
-        // === BOTÓN REPORTAR FALLA ===
         Button(
-            onClick = {
-                navController.navigate("report_screen/$userRole")
-            },
+            onClick = { navController.navigate("report_screen/$userRole") },
             modifier = Modifier
                 .fillMaxWidth()
                 .height(52.dp),
@@ -247,11 +238,8 @@ fun MainContent(navController: NavController) {
 
         Spacer(Modifier.height(12.dp))
 
-        // === BOTÓN VER REPORTES ===
         OutlinedButton(
-            onClick = {
-                navController.navigate("history_screen/$userRole")
-            },
+            onClick = { navController.navigate("history_screen/$userRole") },
             modifier = Modifier
                 .fillMaxWidth()
                 .height(52.dp),
@@ -277,10 +265,45 @@ fun MainContent(navController: NavController) {
     }
 }
 
-
-/* ====== RESUMEN ====== */
+/* ====== RESUMEN EN TIEMPO REAL ====== */
 @Composable
 fun ReportSummary() {
+    var active by remember { mutableStateOf(0) }
+    var inspection by remember { mutableStateOf(0) }
+    var critical by remember { mutableStateOf(0) }
+    var loading by remember { mutableStateOf(true) }
+    var error by remember { mutableStateOf<String?>(null) }
+
+    DisposableEffect(Unit) {
+        val db = FirebaseFirestore.getInstance()
+        val listener = db.collection("reports")
+            .addSnapshotListener { snapshot, e ->
+                if (e != null) {
+                    error = e.message
+                    loading = false
+                    return@addSnapshotListener
+                }
+
+                if (snapshot != null) {
+                    var countInsp = 0
+                    var countCrit = 0
+                    for (doc in snapshot.documents) {
+                        when (doc.getString("status")) {
+                            "inspeccion" -> countInsp++
+                            "falla_critica" -> countCrit++
+                        }
+                    }
+                    inspection = countInsp
+                    critical = countCrit
+                    active = countInsp + countCrit
+                    loading = false
+                    error = null
+                }
+            }
+
+        onDispose { listener.remove() }
+    }
+
     Surface(
         modifier = Modifier
             .fillMaxWidth()
@@ -302,19 +325,34 @@ fun ReportSummary() {
                 fontSize = 15.sp,
                 fontFamily = SfPro
             )
+
             Spacer(Modifier.height(14.dp))
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceEvenly
-            ) {
-                SummaryItem("Activos", "124", showDot = true)
-                SummaryItem("En inspección", "7")
-                SummaryItem("Falla crítica", "0")
+
+            when {
+                loading -> CircularProgressIndicator(color = SyntraGreen, strokeWidth = 3.dp)
+                error != null -> Text(
+                    text = "Error: $error",
+                    color = SyntraSalmon,
+                    fontSize = 12.sp,
+                    fontFamily = SfPro
+                )
+
+                else -> {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceEvenly
+                    ) {
+                        SummaryItem("Activos", active.toString(), showDot = true)
+                        SummaryItem("En inspección", inspection.toString())
+                        SummaryItem("Falla crítica", critical.toString())
+                    }
+                }
             }
         }
     }
 }
 
+/* ====== COMPONENTE DE ITEM DE RESUMEN ====== */
 @Composable
 fun SummaryItem(label: String, value: String, showDot: Boolean = false) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -353,7 +391,6 @@ fun BottomNavBar(navController: NavController, role: String) {
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // 🏠 HOME
             Icon(
                 painter = painterResource(id = R.drawable.ic_home),
                 contentDescription = "Home",
@@ -363,7 +400,6 @@ fun BottomNavBar(navController: NavController, role: String) {
                     .clickable { navController.navigate("main_page/$role") }
             )
 
-            // 🔍 MENÚ
             Icon(
                 painter = painterResource(id = R.drawable.ic_search),
                 contentDescription = "Search",
@@ -376,7 +412,6 @@ fun BottomNavBar(navController: NavController, role: String) {
                     }
             )
 
-            // 🚦 CHATBOT
             Box(
                 modifier = Modifier
                     .size(64.dp)
@@ -393,8 +428,6 @@ fun BottomNavBar(navController: NavController, role: String) {
                 )
             }
 
-
-            // ⏰ HISTORIAL
             Icon(
                 painter = painterResource(id = R.drawable.ic_history),
                 contentDescription = "History",
@@ -404,8 +437,6 @@ fun BottomNavBar(navController: NavController, role: String) {
                     .clickable { navController.navigate("history_screen/$role") }
             )
 
-
-            // 👤 PERFIL
             Icon(
                 painter = painterResource(id = R.drawable.ic_profile),
                 contentDescription = "Profile",
@@ -415,8 +446,6 @@ fun BottomNavBar(navController: NavController, role: String) {
                     .clickable {
                         if (role == "usuario") navController.navigate("profile_user")
                         else navController.navigate("profile_transito")
-
-
                     }
             )
         }
