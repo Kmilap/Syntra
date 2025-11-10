@@ -6,6 +6,11 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -47,23 +52,48 @@ fun MapaScreen(
 ) {
     Box(modifier = Modifier.fillMaxSize()) {
 
-        // === MAPA REAL ===
-        val santanderCenter = LatLng(7.1254, -73.1198) // Bucaramanga
+        // === MAPA CON FIRESTORE ===
+        val santanderCenter = LatLng(7.1254, -73.1198)
         val cameraPositionState = rememberCameraPositionState {
-            position = CameraPosition.fromLatLngZoom(santanderCenter, 14f)
+            position = CameraPosition.fromLatLngZoom(santanderCenter, 13.5f)
         }
 
+        // 🔹 Estado local para guardar los reportes
+        var reports by remember { mutableStateOf<List<ReportesUiModel>>(emptyList()) }
+
+        // 🔹 Cargar los reportes al abrir la pantalla
+        LaunchedEffect(Unit) {
+            val res = ReportRepository.getLast24hReports()
+            if (res.isSuccess) {
+                reports = res.getOrThrow().filter { it.lat != null && it.lng != null }
+            }
+        }
+
+        // === MAPA ===
         GoogleMap(
             modifier = Modifier.fillMaxSize(),
             cameraPositionState = cameraPositionState
         ) {
-            // Marcador de ejemplo
-            Marker(
-                state = MarkerState(position = santanderCenter),
-                title = "Centro de Bucaramanga",
-                snippet = "Ejemplo de marcador inicial"
-            )
+            reports.forEach { report ->
+                val position = LatLng(report.lat ?: 0.0, report.lng ?: 0.0)
+
+                // Color del marcador según estado
+                val hue = when (report.status) {
+                    "operativo" -> com.google.android.gms.maps.model.BitmapDescriptorFactory.HUE_GREEN
+                    "inspeccion" -> com.google.android.gms.maps.model.BitmapDescriptorFactory.HUE_YELLOW
+                    "falla_critica" -> com.google.android.gms.maps.model.BitmapDescriptorFactory.HUE_RED
+                    else -> com.google.android.gms.maps.model.BitmapDescriptorFactory.HUE_AZURE
+                }
+
+                Marker(
+                    state = MarkerState(position = position),
+                    title = report.address.ifBlank { "Reporte sin dirección" },
+                    snippet = report.description.takeIf { it.isNotBlank() } ?: "Sin descripción",
+                    icon = com.google.android.gms.maps.model.BitmapDescriptorFactory.defaultMarker(hue)
+                )
+            }
         }
+
 
         // === Flecha de retroceso funcional ===
         IconButton(

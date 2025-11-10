@@ -35,6 +35,10 @@ import coil.compose.AsyncImage
 import kotlinx.coroutines.launch
 import me.camilanino.syntra.R
 import me.camilanino.syntra.ui.screens.ReportRepository
+import java.net.URL
+import org.json.JSONObject
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 /* ====== (Opcional) Activa Coil si quieres miniaturas ====
    1) build.gradle (app): implementation("io.coil-kt:coil-compose:2.6.0")
@@ -54,6 +58,28 @@ private val SyntraGreen = Color(0xFF63B58D)
 private val SyntraYellow = Color(0xFFFFC048)
 private val SyntraRed = Color(0xFFE74C3C)
 
+
+
+// 🔹 Convierte coordenadas a dirección textual usando Google Geocoding API
+suspend fun getAddressFromCoordinates(lat: Double, lng: Double, apiKey: String): String? {
+    return withContext(Dispatchers.IO) {
+        try {
+            val url =
+                "https://maps.googleapis.com/maps/api/geocode/json?latlng=$lat,$lng&key=$apiKey"
+            val response = URL(url).readText()
+            val json = JSONObject(response)
+            val results = json.getJSONArray("results")
+            if (results.length() > 0) {
+                results.getJSONObject(0).getString("formatted_address")
+            } else null
+        } catch (e: Exception) {
+            e.printStackTrace()
+            null
+        }
+    }
+}
+
+
 /* ====== SCREEN ====== */
 @Composable
 fun ReportesScreen(
@@ -68,6 +94,29 @@ fun ReportesScreen(
     var address by remember { mutableStateOf("") }
     var description by remember { mutableStateOf("") }
     var latLng: Pair<Double, Double>? by remember { mutableStateOf(null) } // ubicación standby
+    // ✅ Escucha activa: se actualiza cada vez que el backStack cambia
+    val currentBackStackEntry = navController.currentBackStackEntry
+    LaunchedEffect(currentBackStackEntry?.savedStateHandle) {
+        currentBackStackEntry?.savedStateHandle?.let { handle ->
+            val lat = handle.get<Double>("selected_lat")
+            val lng = handle.get<Double>("selected_lng")
+
+            if (lat != null && lng != null) {
+                latLng = lat to lng
+                // 🔹 Intentamos obtener dirección real
+                val apiKey = "AIzaSyDXa5WiX58mev1nBbR6vi1SkpUD20gNoeM"
+                val addressText = getAddressFromCoordinates(lat, lng, apiKey)
+
+                address = if (!addressText.isNullOrBlank()) {
+                    addressText
+                } else {
+                    "Coordenadas: %.5f, %.5f".format(lat, lng)
+                }
+            }
+        }
+    }
+
+
 
     // fotos seleccionadas (se eligen con el icono del campo DESCRIPCIÓN)
     var selectedPhotos by remember { mutableStateOf<List<Uri>>(emptyList()) }
@@ -147,15 +196,15 @@ fun ReportesScreen(
             trailingIcon = {
                 Icon(
                     imageVector = Icons.Outlined.LocationOn,
-                    contentDescription = "Ubicación (standby)",
+                    contentDescription = "Seleccionar ubicación en mapa",
                     tint = SyntraBlue,
                     modifier = Modifier.clickable {
-                        // Activar más adelante con Maps/Places:
-                        // address = "Cabecera, Bucaramanga"
-                        // latLng = 7.119349 to -73.122741
+                        // Navega hacia la pantalla de selección de ubicación
+                        navController.navigate("select_location_screen")
                     }
                 )
-            },
+            }
+            ,
             modifier = Modifier
                 .fillMaxWidth()
                 .height(56.dp)

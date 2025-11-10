@@ -321,6 +321,12 @@ fun AppNavHost() {
             FeedbackPage(navController = nav, role = role, fromMenu = fromMenu)
         }
 
+        composable("select_location_screen") {
+            SeleccionarUbicacionScreen(navController= nav)
+        }
+
+
+
 
 
 
