@@ -3,7 +3,7 @@ package me.camilanino.syntra.ui.screens
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -22,75 +22,84 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.res.painterResource
 import androidx.navigation.NavController
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.Query
 import kotlinx.coroutines.launch
 import me.camilanino.syntra.R
+import com.google.firebase.firestore.FieldValue
+import kotlinx.coroutines.tasks.await
 
-/* ====== FUENTES (igual que en MainPage) ====== */
+/* ====== FUENTES ====== */
 private val SfProRounded = FontFamily(Font(R.font.sf_pro_rounded_regular))
 private val SfPro = FontFamily(Font(R.font.sf_pro))
 
-/* ====== PALETA SYNTRA (idéntica a tu MainPage) ====== */
-private val SyntraBlue     = Color(0xFF4D81E7)
-private val SyntraSalmon   = Color(0xFFE74C3C)
-private val SyntraWhite    = Color(0xFFF1F2F8)
-private val SyntraGray     = Color(0xFF6C7278)
-private val SyntraGreen    = Color(0xFF63B58D)
+/* ====== PALETA ====== */
+private val SyntraBlue = Color(0xFF4D81E7)
+private val SyntraSalmon = Color(0xFFE74C3C)
+private val SyntraWhite = Color(0xFFF1F2F8)
+private val SyntraGray = Color(0xFF6C7278)
+private val SyntraGreen = Color(0xFF63B58D)
 private val SyntraDarkBlue = Color(0xFF273746)
 
-/* =================================================================================
- * PANTALLA FEEDBACK
- * ================================================================================= */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FeedbackPage(
-    onBack: () -> Unit = {},
     navController: NavController,
     role: String,
     fromMenu: Boolean = false,
-    // Si quieres usar tu BottomNavBar() original, cambia esta línea a: bottomBar = { BottomNavBar() }
     bottomBar: @Composable () -> Unit = { FeedbackBottomNavBar() }
 ) {
-    var comentarios by remember { mutableStateOf(listOf<String>()) }
-    var nuevo by remember { mutableStateOf("") }
-
-    // Snackbar para “Deshacer”
-    val snackbarHostState = remember { SnackbarHostState() }
+    val db = FirebaseFirestore.getInstance()
+    val auth = FirebaseAuth.getInstance()
+    val user = auth.currentUser
     val scope = rememberCoroutineScope()
+
+    var nuevo by remember { mutableStateOf("") }
+    var feedbackList by remember { mutableStateOf<List<Map<String, Any>>>(emptyList()) }
+    var username by remember { mutableStateOf("Usuario") }
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    // 🔹 Obtener username desde Firestore una sola vez
+    LaunchedEffect(user) {
+        user?.uid?.let { uid ->
+            val userDoc = db.collection("users").document(uid).get().await()
+            val fetchedName = userDoc.getString("username")
+            if (!fetchedName.isNullOrBlank()) username = fetchedName
+        }
+    }
+
+    // 🔹 Escucha activa de comentarios
+    LaunchedEffect(Unit) {
+        db.collection("feedback")
+            .orderBy("createdAt", Query.Direction.DESCENDING)
+            .addSnapshotListener { snapshots, e ->
+                if (e == null && snapshots != null) {
+                    feedbackList = snapshots.documents.map { doc ->
+                        doc.data?.plus("id" to doc.id) ?: emptyMap()
+                    }
+                }
+            }
+    }
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = {
-                    Text(
-                        "Feedback",
-                        fontFamily = SfPro,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 20.sp
-                    )
-                },
+                title = { Text("Feedback", fontFamily = SfPro, fontWeight = FontWeight.Bold, fontSize = 20.sp) },
                 navigationIcon = {
                     IconButton(onClick = {
                         if (fromMenu) {
-                            if (role == "usuario") {
-                                navController.navigate("menu_user")
-                            } else {
-                                navController.navigate("menu_transito")
-                            }
-                        } else {
-                            navController.navigate("main_page/$role")
-                        }
+                            if (role == "usuario") navController.navigate("menu_user")
+                            else navController.navigate("menu_transito")
+                        } else navController.navigate("main_page/$role")
                     }) {
                         Icon(Icons.Outlined.ArrowBack, contentDescription = "Volver")
                     }
-
                 },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = SyntraWhite
-                )
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = SyntraWhite)
             )
         },
-        snackbarHost = { SnackbarHost(snackbarHostState) },
-
+        snackbarHost = { SnackbarHost(snackbarHostState) }
     ) { padding ->
         Column(
             modifier = Modifier
@@ -99,14 +108,8 @@ fun FeedbackPage(
                 .padding(padding)
                 .padding(horizontal = 20.dp, vertical = 12.dp)
         ) {
-            // Campo para agregar comentario
-            Text(
-                text = "Agregar comentario",
-                fontFamily = SfPro,
-                fontWeight = FontWeight.SemiBold,
-                fontSize = 16.sp,
-                color = Color.Black
-            )
+            // ===== CAMPO DE NUEVO COMENTARIO =====
+            Text("Agregar comentario", fontFamily = SfPro, fontWeight = FontWeight.SemiBold, fontSize = 16.sp)
             Spacer(Modifier.height(8.dp))
 
             OutlinedTextField(
@@ -114,22 +117,24 @@ fun FeedbackPage(
                 onValueChange = { nuevo = it },
                 placeholder = { Text("Escribe tu comentario…", fontFamily = SfPro, color = SyntraGray) },
                 maxLines = 5,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .heightIn(min = 96.dp),
+                modifier = Modifier.fillMaxWidth().heightIn(min = 96.dp),
                 shape = RoundedCornerShape(16.dp)
             )
 
             Spacer(Modifier.height(10.dp))
 
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.End
-            ) {
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
                 Button(
                     onClick = {
-                        if (nuevo.isNotBlank()) {
-                            comentarios = comentarios + nuevo.trim()
+                        val currentUser = auth.currentUser
+                        if (nuevo.isNotBlank() && currentUser != null) {
+                            val feedbackData = mapOf(
+                                "uid" to currentUser.uid,
+                                "name" to username,
+                                "message" to nuevo.trim(),
+                                "createdAt" to FieldValue.serverTimestamp()
+                            )
+                            db.collection("feedback").add(feedbackData)
                             nuevo = ""
                         }
                     },
@@ -143,9 +148,9 @@ fun FeedbackPage(
 
             Spacer(Modifier.height(14.dp))
 
-            // Lista de comentarios
+            // ===== LISTA DE COMENTARIOS =====
             Text(
-                text = "Comentarios",
+                text = "Comentarios recientes",
                 fontFamily = SfPro,
                 fontWeight = FontWeight.SemiBold,
                 fontSize = 15.sp,
@@ -154,31 +159,24 @@ fun FeedbackPage(
             Spacer(Modifier.height(8.dp))
 
             LazyColumn(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .weight(1f),
+                modifier = Modifier.fillMaxWidth().weight(1f),
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                itemsIndexed(comentarios) { index, c ->
-                    CommentCard(
-                        texto = c,
-                        onDelete = {
-                            // Borrar con opción de deshacer
-                            val eliminado = comentarios[index]
-                            val listaAnterior = comentarios
-                            comentarios = comentarios.toMutableList().also { it.removeAt(index) }
+                items(feedbackList) { fb ->
+                    val name = fb["name"] as? String ?: "Usuario"
+                    val message = fb["message"] as? String ?: ""
+                    val uid = fb["uid"] as? String
+                    val firstLetter = name.firstOrNull()?.uppercaseChar() ?: 'U'
+                    val canDelete = uid == user?.uid
 
-                            scope.launch {
-                                val res = snackbarHostState.showSnackbar(
-                                    message = "Comentario eliminado",
-                                    actionLabel = "Deshacer",
-                                    withDismissAction = true,
-                                    duration = SnackbarDuration.Short
-                                )
-                                if (res == SnackbarResult.ActionPerformed) {
-                                    // Restaurar
-                                    comentarios = listaAnterior
-                                }
+                    CommentCard(
+                        name = name,
+                        initial = firstLetter.toString(),
+                        texto = message,
+                        canDelete = canDelete,
+                        onDelete = {
+                            fb["id"]?.let { id ->
+                                db.collection("feedback").document(id.toString()).delete()
                             }
                         }
                     )
@@ -188,64 +186,62 @@ fun FeedbackPage(
     }
 }
 
-/* ====== CARD DE COMENTARIO (gris estilo mock) ====== */
+/* ====== CARD CON NOMBRE Y AVATAR ====== */
 @Composable
 private fun CommentCard(
+    name: String,
+    initial: String,
     texto: String,
+    canDelete: Boolean,
     onDelete: () -> Unit
 ) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(14.dp),
-        color = Color(0xFFD0D0D0) // gris de tus cards
+        color = Color(0xFFDDE3F3)
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(12.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            // avatar círculo blanco
-            Box(
-                modifier = Modifier
-                    .size(28.dp)
-                    .clip(CircleShape)
-                    .background(Color.White)
-            )
-            Spacer(Modifier.width(10.dp))
-
-            // texto
+        Column(modifier = Modifier.padding(12.dp)) {
+            // Nombre encima
             Text(
-                text = texto,
+                text = name,
                 fontFamily = SfPro,
-                fontSize = 14.sp,
-                color = Color.Black,
-                modifier = Modifier.weight(1f)
+                fontWeight = FontWeight.SemiBold,
+                fontSize = 13.sp,
+                color = SyntraBlue
             )
-
-            // botón eliminar
-            IconButton(onClick = onDelete) {
-                Icon(
-                    imageVector = Icons.Outlined.Delete,
-                    contentDescription = "Eliminar",
-                    tint = SyntraSalmon
+            Spacer(Modifier.height(4.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                // Avatar con inicial
+                Box(
+                    modifier = Modifier
+                        .size(28.dp)
+                        .clip(CircleShape)
+                        .background(SyntraBlue),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(initial, color = Color.White, fontFamily = SfPro, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                }
+                Spacer(Modifier.width(10.dp))
+                Text(
+                    text = texto,
+                    fontFamily = SfProRounded,
+                    fontSize = 14.sp,
+                    color = Color.Black,
+                    modifier = Modifier.weight(1f)
                 )
+                if (canDelete) {
+                    IconButton(onClick = onDelete) {
+                        Icon(Icons.Outlined.Delete, contentDescription = "Eliminar", tint = SyntraSalmon)
+                    }
+                }
             }
         }
     }
 }
 
-/* =================================================================================
- * BOTTOM NAV BAR RENOMBRADA (misma estética)
- * ================================================================================= */
+/* ====== NAVBAR ====== */
 @Composable
-fun FeedbackBottomNavBar(
-    onHome: () -> Unit = {},
-    onSearch: () -> Unit = {},
-    onCenter: () -> Unit = {},
-    onHistory: () -> Unit = {},
-    onProfile: () -> Unit = {}
-) {
+fun FeedbackBottomNavBar() {
     Surface(
         modifier = Modifier.fillMaxWidth(),
         color = Color.White,
@@ -258,25 +254,8 @@ fun FeedbackBottomNavBar(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Icon(
-                painter = painterResource(id = R.drawable.ic_home),
-                contentDescription = "Home",
-                tint = Color.Black,
-                modifier = Modifier
-                    .size(26.dp)
-                    .padding(2.dp)
-            )
-
-            Icon(
-                painter = painterResource(id = R.drawable.ic_search),
-                contentDescription = "Search",
-                tint = SyntraGray,
-                modifier = Modifier
-                    .size(26.dp)
-                    .padding(2.dp)
-            )
-
-            // Botón central “resaltado”
+            Icon(painter = painterResource(id = R.drawable.ic_home), contentDescription = "Home", tint = Color.Black)
+            Icon(painter = painterResource(id = R.drawable.ic_search), contentDescription = "Search", tint = SyntraGray)
             Box(
                 modifier = Modifier
                     .size(64.dp)
@@ -284,31 +263,10 @@ fun FeedbackBottomNavBar(
                     .background(SyntraDarkBlue),
                 contentAlignment = Alignment.Center
             ) {
-                Icon(
-                    painter = painterResource(id = R.drawable.ic_traffic_center),
-                    contentDescription = "Centro",
-                    tint = Color.Unspecified,
-                    modifier = Modifier.size(36.dp)
-                )
+                Icon(painter = painterResource(id = R.drawable.ic_traffic_center), contentDescription = "Centro", tint = Color.Unspecified)
             }
-
-            Icon(
-                painter = painterResource(id = R.drawable.ic_history),
-                contentDescription = "History",
-                tint = SyntraGray,
-                modifier = Modifier
-                    .size(26.dp)
-                    .padding(2.dp)
-            )
-
-            Icon(
-                painter = painterResource(id = R.drawable.ic_profile),
-                contentDescription = "Profile",
-                tint = SyntraGray,
-                modifier = Modifier
-                    .size(26.dp)
-                    .padding(2.dp)
-            )
+            Icon(painter = painterResource(id = R.drawable.ic_history), contentDescription = "History", tint = SyntraGray)
+            Icon(painter = painterResource(id = R.drawable.ic_profile), contentDescription = "Profile", tint = SyntraGray)
         }
     }
 }
