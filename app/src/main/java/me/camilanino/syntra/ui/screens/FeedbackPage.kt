@@ -48,6 +48,7 @@ fun FeedbackPage(
     navController: NavController,
     role: String,
     fromMenu: Boolean = false,
+    fromChatbot: Boolean = false,
     bottomBar: @Composable () -> Unit = { FeedbackBottomNavBar() }
 ) {
     val db = FirebaseFirestore.getInstance()
@@ -88,10 +89,14 @@ fun FeedbackPage(
                 title = { Text("Feedback", fontFamily = SfPro, fontWeight = FontWeight.Bold, fontSize = 20.sp) },
                 navigationIcon = {
                     IconButton(onClick = {
-                        if (fromMenu) {
-                            if (role == "usuario") navController.navigate("menu_user")
-                            else navController.navigate("menu_transito")
-                        } else navController.navigate("main_page/$role")
+                        when {
+                            fromChatbot -> navController.navigate("chatbot_screen/$role?fromMenu=false")
+                            fromMenu -> {
+                                if (role == "usuario") navController.navigate("menu_user")
+                                else navController.navigate("menu_transito")
+                            }
+                            else -> navController.navigate("main_page/$role")
+                        }
                     }) {
                         Icon(Icons.Outlined.ArrowBack, contentDescription = "Volver")
                     }

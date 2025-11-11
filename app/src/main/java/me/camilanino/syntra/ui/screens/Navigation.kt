@@ -1,5 +1,7 @@
 package me.camilanino.syntra.ui.screens
 
+import android.os.Build
+import androidx.annotation.RequiresApi
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.navigation.NavType
@@ -9,6 +11,7 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import kotlinx.coroutines.tasks.await
 
+@RequiresApi(Build.VERSION_CODES.VANILLA_ICE_CREAM)
 @Composable
 fun AppNavHost() {
     val nav = rememberNavController()
@@ -160,52 +163,53 @@ fun AppNavHost() {
 
         // === REPORTES SCREEN (COMPARTIDA) ===
         composable(
-            route = "report_screen/{role}?fromMenu={fromMenu}&fromMap={fromMap}",
+            route = "report_screen/{role}?fromMenu={fromMenu}&fromMap={fromMap}&fromChatbot={fromChatbot}",
             arguments = listOf(
                 navArgument("role") { type = NavType.StringType },
-                navArgument("fromMenu") {
-                    type = NavType.BoolType
-                    defaultValue = false
-                },
-                navArgument("fromMap") {
-                    type = NavType.BoolType
-                    defaultValue = false
-                }
+                navArgument("fromMenu") { type = NavType.BoolType; defaultValue = false },
+                navArgument("fromMap") { type = NavType.BoolType; defaultValue = false },
+                navArgument("fromChatbot") { type = NavType.BoolType; defaultValue = false }
             )
         ) { backStackEntry ->
             val role = backStackEntry.arguments?.getString("role") ?: "usuario"
             val fromMenu = backStackEntry.arguments?.getBoolean("fromMenu") ?: false
             val fromMap = backStackEntry.arguments?.getBoolean("fromMap") ?: false
+            val fromChatbot = backStackEntry.arguments?.getBoolean("fromChatbot") ?: false
 
             ReportesScreen(
                 navController = nav,
                 role = role,
                 fromMenu = fromMenu,
-                fromMap = fromMap
+                fromMap = fromMap,
+                fromChatbot = fromChatbot
             )
         }
 
 
 
+
         // === HISTORIAL SCREEN (COMPARTIDA) ===
         composable(
-            route = "history_screen/{role}?fromMenu={fromMenu}&fromMap={fromMap}",
+            route = "history_screen/{role}?fromMenu={fromMenu}&fromMap={fromMap}&fromChatbot={fromChatbot}",
             arguments = listOf(
                 navArgument("role") { type = NavType.StringType },
-                navArgument("fromMenu") {
-                    type = NavType.BoolType
-                    defaultValue = false
-                },
-                navArgument("fromMap") {
-                    type = NavType.BoolType
-                    defaultValue = false
-                }
+                navArgument("fromMenu") { type = NavType.BoolType; defaultValue = false },
+                navArgument("fromMap") { type = NavType.BoolType; defaultValue = false },
+                navArgument("fromChatbot") { type = NavType.BoolType; defaultValue = false }
             )
         ) { backStackEntry ->
             val role = backStackEntry.arguments?.getString("role") ?: "usuario"
             val fromMenu = backStackEntry.arguments?.getBoolean("fromMenu") ?: false
             val fromMap = backStackEntry.arguments?.getBoolean("fromMap") ?: false
-            HistorialScreen(navController = nav, role = role, fromMenu = fromMenu, fromMap = fromMap)
+            val fromChatbot = backStackEntry.arguments?.getBoolean("fromChatbot") ?: false
+
+            HistorialScreen(
+                navController = nav,
+                role = role,
+                fromMenu = fromMenu,
+                fromMap = fromMap,
+                fromChatbot = fromChatbot
+            )
         }
 
 
@@ -215,18 +219,19 @@ fun AppNavHost() {
 
         // === PERFIL (USUARIO) ===
         composable(
-            route = "profile_user?fromMenu={fromMenu}",
+            route = "profile_user?fromMenu={fromMenu}&fromChatbot={fromChatbot}",
             arguments = listOf(
-                navArgument("fromMenu") {
-                    type = NavType.BoolType
-                    defaultValue = false
-                }
+                navArgument("fromMenu") { type = NavType.BoolType; defaultValue = false },
+                navArgument("fromChatbot") { type = NavType.BoolType; defaultValue = false }
             )
         ) { backStackEntry ->
             val fromMenu = backStackEntry.arguments?.getBoolean("fromMenu") ?: false
+            val fromChatbot = backStackEntry.arguments?.getBoolean("fromChatbot") ?: false
+
             ProfileScreenFirebase(
                 navController = nav,
                 fromMenu = fromMenu,
+                fromChatbot = fromChatbot,
                 onForgotPassword = { nav.navigate("verify_password") },
                 onLogout = {
                     nav.navigate("welcome") {
@@ -236,22 +241,21 @@ fun AppNavHost() {
             )
         }
 
-
-
-
+// === PERFIL (TRÁNSITO) ===
         composable(
-            route = "profile_transito?fromMenu={fromMenu}",
+            route = "profile_transito?fromMenu={fromMenu}&fromChatbot={fromChatbot}",
             arguments = listOf(
-                navArgument("fromMenu") {
-                    type = NavType.BoolType
-                    defaultValue = false
-                }
+                navArgument("fromMenu") { type = NavType.BoolType; defaultValue = false },
+                navArgument("fromChatbot") { type = NavType.BoolType; defaultValue = false }
             )
         ) { backStackEntry ->
             val fromMenu = backStackEntry.arguments?.getBoolean("fromMenu") ?: false
+            val fromChatbot = backStackEntry.arguments?.getBoolean("fromChatbot") ?: false
+
             ProfileScreenTransito(
                 navController = nav,
                 fromMenu = fromMenu,
+                fromChatbot = fromChatbot,
                 onForgotPassword = { nav.navigate("verify_password") },
                 onLogout = {
                     nav.navigate("welcome") {
@@ -260,6 +264,7 @@ fun AppNavHost() {
                 }
             )
         }
+
 
 
         // === CHATBOT (COMPARTIDO) ===
@@ -280,46 +285,63 @@ fun AppNavHost() {
 
         // === MAPA SCREEN (COMPARTIDA) ===
         composable(
-            route = "mapa_screen/{role}?fromMenu={fromMenu}",
+            route = "mapa_screen/{role}?fromMenu={fromMenu}&fromChatbot={fromChatbot}",
             arguments = listOf(
                 navArgument("role") { type = NavType.StringType },
-                navArgument("fromMenu") {
+                navArgument("fromMenu") { type = NavType.BoolType; defaultValue = false },
+                navArgument("fromChatbot") { type = NavType.BoolType; defaultValue = false }
+            )
+        ) { backStackEntry ->
+            val role = backStackEntry.arguments?.getString("role") ?: "usuario"
+            val fromMenu = backStackEntry.arguments?.getBoolean("fromMenu") ?: false
+            val fromChatbot = backStackEntry.arguments?.getBoolean("fromChatbot") ?: false
+
+            MapaScreen(navController = nav, role = role, fromMenu = fromMenu, fromChatbot = fromChatbot)
+        }
+
+
+
+
+        // === ESTADÍSTICAS (EXCLUSIVA DE TRÁNSITO) ===
+        composable(
+            route = "estadisticas_screen/agente?fromChatbot={fromChatbot}",
+            arguments = listOf(
+                navArgument("fromChatbot") {
                     type = NavType.BoolType
                     defaultValue = false
                 }
             )
         ) { backStackEntry ->
-            val role = backStackEntry.arguments?.getString("role") ?: "usuario"
-            val fromMenu = backStackEntry.arguments?.getBoolean("fromMenu") ?: false
-            MapaScreen(navController = nav, role = role, fromMenu = fromMenu)
+            val fromChatbot = backStackEntry.arguments?.getBoolean("fromChatbot") ?: false
+
+            EstadisticasScreen(
+                navController = nav,
+                fromChatbot = fromChatbot
+            )
         }
 
 
-// === ESTADÍSTICAS (EXCLUSIVA DE TRÁNSITO) ===
-        composable(
-            route = "estadisticas_screen/{role}",
-            arguments = listOf(navArgument("role") { type = NavType.StringType })
-        ) { backStackEntry ->
-            val role = backStackEntry.arguments?.getString("role") ?: "agente"
-            EstadisticasScreen(navController = nav)
-        }
+
+
+
 
 
         // === FEEDBACK SCREEN (COMPARTIDA) ===
         composable(
-            route = "feedback_screen/{role}?fromMenu={fromMenu}",
+            route = "feedback_screen/{role}?fromMenu={fromMenu}&fromChatbot={fromChatbot}",
             arguments = listOf(
                 navArgument("role") { type = NavType.StringType },
-                navArgument("fromMenu") {
-                    type = NavType.BoolType
-                    defaultValue = false
-                }
+                navArgument("fromMenu") { type = NavType.BoolType; defaultValue = false },
+                navArgument("fromChatbot") { type = NavType.BoolType; defaultValue = false }
             )
         ) { backStackEntry ->
             val role = backStackEntry.arguments?.getString("role") ?: "usuario"
             val fromMenu = backStackEntry.arguments?.getBoolean("fromMenu") ?: false
-            FeedbackPage(navController = nav, role = role, fromMenu = fromMenu)
+            val fromChatbot = backStackEntry.arguments?.getBoolean("fromChatbot") ?: false
+
+            FeedbackPage(navController = nav, role = role, fromMenu = fromMenu, fromChatbot = fromChatbot)
         }
+
 
         composable("select_location_screen") {
             SeleccionarUbicacionScreen(navController= nav)

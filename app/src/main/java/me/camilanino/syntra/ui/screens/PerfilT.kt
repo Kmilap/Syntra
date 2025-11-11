@@ -175,7 +175,8 @@ fun ProfileScreenTransito(
     navController: NavController,
     onForgotPassword: () -> Unit = {},
     onLogout: () -> Unit = {},
-    fromMenu: Boolean = false
+    fromMenu: Boolean = false,
+    fromChatbot: Boolean = false
 ) {
     val auth = FirebaseAuth.getInstance()
     val db = FirebaseFirestore.getInstance()
@@ -221,12 +222,15 @@ fun ProfileScreenTransito(
     ) {
         BigHeader(
             title = "Perfil tránsito",
-            onBack = {  if (fromMenu) {
-                navController.navigate("menu_transito")
-            } else {
-                navController.navigate("main_page/agente")
-            } }
+            onBack = {
+                when {
+                    fromChatbot -> navController.navigate("chatbot_screen/agente?fromMenu=false")
+                    fromMenu -> navController.navigate("menu_transito")
+                    else -> navController.navigate("main_page/agente")
+                }
+            }
         )
+
 
 
         Column(

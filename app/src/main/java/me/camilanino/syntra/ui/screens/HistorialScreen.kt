@@ -56,7 +56,8 @@ fun HistorialScreen(
     navController: NavController,
     role: String,                     // "usuario" | "agente"
     fromMenu: Boolean = false,
-    fromMap: Boolean = false
+    fromMap: Boolean = false,
+    fromChatbot: Boolean = false
 ) {
     val scope = rememberCoroutineScope()
 
@@ -89,7 +90,7 @@ fun HistorialScreen(
             .padding(horizontal = 20.dp)
     ) {
         Spacer(Modifier.height(36.dp))
-        TopBar(navController, role, fromMenu, fromMap)
+        TopBar(navController, role, fromMenu, fromMap,fromChatbot)
 
         Spacer(Modifier.height(12.dp))
         TabRow(
@@ -187,7 +188,8 @@ private fun TopBar(
     navController: NavController,
     role: String,
     fromMenu: Boolean,
-    fromMap: Boolean
+    fromMap: Boolean,
+    fromChatbot: Boolean
 ) {
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -203,6 +205,11 @@ private fun TopBar(
                     .size(28.dp)
                     .clickable {
                         when {
+                            fromChatbot -> {
+                                navController.navigate("chatbot_screen/$role?fromMenu=false") {
+                                    popUpTo("history_screen/$role") { inclusive = true }
+                                }
+                            }
                             fromMap -> navController.navigate("mapa_screen/$role?fromMenu=true") {
                                 popUpTo("history_screen/$role") { inclusive = true }
                             }

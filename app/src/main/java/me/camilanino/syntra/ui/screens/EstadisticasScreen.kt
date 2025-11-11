@@ -51,7 +51,7 @@ private val SyntraOrange = Color(0xFFE74C3C)
 
 /* ====== PANTALLA ESTADÍSTICAS (datos reales) ====== */
 @Composable
-fun EstadisticasScreen(navController: NavController) {
+fun EstadisticasScreen(navController: NavController, fromChatbot: Boolean = false) {
     val scope = rememberCoroutineScope()
     var visible by remember { mutableStateOf(false) }
     var loading by remember { mutableStateOf(true) }
@@ -87,7 +87,13 @@ fun EstadisticasScreen(navController: NavController) {
         ) {
             // Encabezado rojo
             EstadisticasHeader(
-                onBackClick = { navController.navigate("menu_transito") }
+                onBackClick = {
+                    if (fromChatbot) {
+                        navController.navigate("chatbot_screen/agente?fromMenu=false")
+                    } else {
+                        navController.navigate("menu_transito")
+                    }
+                }
             )
 
             AnimatedVisibility(visible = visible) {

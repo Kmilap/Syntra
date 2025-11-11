@@ -1,30 +1,34 @@
 package me.camilanino.syntra.ui.screens
+
+import android.os.Build
+import androidx.annotation.RequiresApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.ArrowBack
-import androidx.compose.material.icons.outlined.AttachFile
 import androidx.compose.material.icons.outlined.Send
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import kotlinx.coroutines.launch
 import me.camilanino.syntra.R
-
+import androidx.compose.runtime.remember
+import androidx.compose.ui.platform.LocalContext
 /* ====== FUENTES Y COLORES ====== */
 private val SfProRounded = FontFamily(Font(R.font.sf_pro_rounded_regular))
 private val SfPro = FontFamily(Font(R.font.sf_pro))
@@ -33,15 +37,34 @@ private val SyntraWhite = Color(0xFFF1F2F8)
 private val SyntraGray = Color(0xFF6C7278)
 private val SyntraGreen = Color(0xFF63B58D)
 private val SyntraLightGray = Color(0xFFE6E6E6)
-private val SyntraDarkBlue = Color(0xFF273746)
+
+/* ====== DATA CLASSES ====== */
+data class ChatMessage(
+    val text: String,
+    val isUser: Boolean,
+    val buttons: List<ChatButton>? = null
+)
+
+data class ChatButton(
+    val label: String,
+    val destination: String
+)
 
 /* ====== PANTALLA PRINCIPAL ====== */
-
+@RequiresApi(Build.VERSION_CODES.VANILLA_ICE_CREAM)
 @Composable
-fun ChatbotScreen(navController: NavController, role: String,fromMenu: Boolean = false) {
-    // Solo para depuración inicial
+fun ChatbotScreen(navController: NavController, role: String, fromMenu: Boolean = false) {
+    val coroutineScope = rememberCoroutineScope()
+    var messages by remember { mutableStateOf(listOf<ChatMessage>()) }
+    var inputText by remember { mutableStateOf("") }
+
+    // 🔹 Clave de API (la obtendremos de tu ApiKeyProvider)
+    val context = LocalContext.current
+    val apiKey = remember { ApiKeyProvider.getOpenAIKey(context) ?: "" }
+
+    // Mensaje inicial del bot
     LaunchedEffect(role) {
-        println("Rol detectado en ChatbotScreen: $role")
+        messages = messages + ChatbotBrain.getWelcomeMessage(role)
     }
 
     Column(
@@ -49,14 +72,33 @@ fun ChatbotScreen(navController: NavController, role: String,fromMenu: Boolean =
             .fillMaxSize()
             .background(SyntraWhite)
     ) {
-        ChatHeader(navController, role,fromMenu)
-        Spacer(Modifier.height(10.dp))
-        ChatMessages(
-            modifier = Modifier
-                .weight(1f)
-                .fillMaxWidth()
+        ChatHeader(navController, role, fromMenu)
+        Spacer(Modifier.height(4.dp))
+
+        ChatMessages(messages = messages, navController = navController)
+
+        ChatInputBar(
+            text = inputText,
+            onTextChange = { inputText = it },
+            onSend = {
+                if (inputText.isNotBlank()) {
+                    val userMsg = ChatMessage(text = inputText.trim(), isUser = true)
+                    messages = messages + userMsg
+
+                    val userInput = inputText
+                    inputText = ""
+
+                    coroutineScope.launch {
+                        val botReply = ChatbotBrain.processMessage(
+                            userText = userInput,
+                            role = role,
+                            apiKey = apiKey
+                        )
+                        messages = messages + botReply
+                    }
+                }
+            }
         )
-        ChatInputBar()
     }
 }
 
@@ -68,79 +110,67 @@ fun ChatHeader(navController: NavController, role: String, fromMenu: Boolean = f
             .fillMaxWidth()
             .padding(start = 20.dp, end = 20.dp, top = 24.dp, bottom = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceBetween
+        horizontalArrangement = Arrangement.spacedBy(10.dp)
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Icon(
-                imageVector = Icons.Outlined.ArrowBack,
-                contentDescription = "Atrás",
-                tint = Color.Black,
-                modifier = Modifier
-                    .size(22.dp)
-                    .clickable {
-                        if (fromMenu) {
-                            if (role == "usuario") {
-                                navController.navigate("menu_user")
-                            } else {
-                                navController.navigate("menu_transito")
-                            }
-                        } else {
-                            navController.navigate("main_page/$role")
-                        }
-                    }
-
-            )
-            Spacer(Modifier.width(10.dp))
-            Column(
-                verticalArrangement = Arrangement.Center
-            ) {
-                Text(
-                    text = "Asistente de Syntra",
-                    color = Color.Black,
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    fontFamily = SfProRounded
-                )
-                Text(
-                    text = "Reporta y consulta por chat",
-                    color = SyntraGray.copy(alpha = 0.7f),
-                    fontSize = 13.sp,
-                    fontFamily = SfPro
-                )
-            }
-        }
-
         Icon(
-            painter = painterResource(id = R.drawable.ic_danger),
-            contentDescription = "Información",
+            imageVector = Icons.Outlined.ArrowBack,
+            contentDescription = "Atrás",
             tint = Color.Black,
-            modifier = Modifier.size(20.dp)
+            modifier = Modifier
+                .size(22.dp)
+                .clickable {
+                    if (fromMenu) {
+                        if (role == "usuario") navController.navigate("menu_user")
+                        else navController.navigate("menu_transito")
+                    } else {
+                        navController.navigate("main_page/$role")
+                    }
+                }
         )
+        Column {
+            Text(
+                text = "Asistente de Syntra",
+                color = Color.Black,
+                fontSize = 18.sp,
+                fontWeight = FontWeight.SemiBold,
+                fontFamily = SfProRounded
+            )
+            Text(
+                text = "Chat de ayuda y orientación",
+                color = SyntraGray.copy(alpha = 0.7f),
+                fontSize = 13.sp,
+                fontFamily = SfPro
+            )
+        }
     }
 }
-
 
 /* ====== CUERPO DEL CHAT ====== */
 @Composable
-fun ChatMessages(modifier: Modifier = Modifier) {
+fun ChatMessages(messages: List<ChatMessage>, navController: NavController, modifier: Modifier = Modifier) {
+    val scrollState = rememberScrollState()
+    LaunchedEffect(messages.size) {
+        scrollState.animateScrollTo(scrollState.maxValue + 200)
+    }
+
     Column(
         modifier = modifier
             .background(SyntraLightGray)
-            .verticalScroll(rememberScrollState())
+            .verticalScroll(scrollState)
             .padding(horizontal = 16.dp, vertical = 10.dp)
     ) {
-        ChatBubble(text = "Hola, ¿en qué puedo ayudarte?", isUser = false)
-        ChatBubble(text = "Tengo un problema con un semáforo que no cambia.", isUser = true)
-        ChatBubble(text = "¿Podrías indicarme la ubicación del semáforo?", isUser = false)
+        for (msg in messages) {
+            ChatBubble(msg, navController)
+        }
     }
 }
 
-/* ====== BURBUJAS ====== */
+/* ====== BURBUJAS CON BOTONES ====== */
 @Composable
-fun ChatBubble(text: String, isUser: Boolean) {
-    val bubbleColor = if (isUser) SyntraGreen else Color.LightGray.copy(alpha = 0.8f)
-    val boxAlignment = if (isUser) Alignment.CenterEnd else Alignment.CenterStart
-    val cornerShape = if (isUser)
+fun ChatBubble(message: ChatMessage, navController: NavController) {
+    val bubbleColor = if (message.isUser) SyntraGreen else Color.LightGray.copy(alpha = 0.85f)
+    val boxAlignment = if (message.isUser) Alignment.CenterEnd else Alignment.CenterStart
+    val cornerShape = if (message.isUser)
         RoundedCornerShape(16.dp, 16.dp, 0.dp, 16.dp)
     else
         RoundedCornerShape(16.dp, 16.dp, 16.dp, 0.dp)
@@ -151,7 +181,7 @@ fun ChatBubble(text: String, isUser: Boolean) {
             .padding(vertical = 4.dp, horizontal = 6.dp),
         contentAlignment = boxAlignment
     ) {
-        Box(
+        Column(
             modifier = Modifier
                 .clip(cornerShape)
                 .background(bubbleColor)
@@ -159,19 +189,38 @@ fun ChatBubble(text: String, isUser: Boolean) {
                 .widthIn(max = 280.dp)
         ) {
             Text(
-                text = text,
-                color = if (isUser) Color.White else Color.Black,
+                text = message.text,
+                color = if (message.isUser) Color.White else Color.Black,
                 fontSize = 14.sp,
                 fontFamily = SfPro,
-                lineHeight = 18.sp
+                lineHeight = 18.sp,
+                textAlign = if (message.isUser) TextAlign.End else TextAlign.Start
             )
+
+            message.buttons?.forEach { btn ->
+                Spacer(Modifier.height(6.dp))
+                Button(
+                    onClick = { navController.navigate(btn.destination) },
+                    colors = ButtonDefaults.buttonColors(containerColor = SyntraBlue),
+                    shape = RoundedCornerShape(12.dp),
+                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
+                    modifier = Modifier.align(Alignment.CenterHorizontally)
+                ) {
+                    Text(
+                        text = btn.label,
+                        color = Color.White,
+                        fontSize = 13.sp,
+                        fontFamily = SfPro
+                    )
+                }
+            }
         }
     }
 }
 
 /* ====== INPUT BAR ====== */
 @Composable
-fun ChatInputBar() {
+fun ChatInputBar(text: String, onTextChange: (String) -> Unit, onSend: () -> Unit) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -186,34 +235,39 @@ fun ChatInputBar() {
                 .padding(horizontal = 14.dp, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Ícono de adjuntar
-            Icon(
-                imageVector = Icons.Outlined.AttachFile,
-                contentDescription = "Adjuntar",
-                tint = Color.Black,
-                modifier = Modifier.size(22.dp)
+            BasicTextField(
+                value = text,
+                onValueChange = onTextChange,
+                singleLine = true,
+                modifier = Modifier.weight(1f),
+                textStyle = androidx.compose.ui.text.TextStyle(
+                    color = Color.Black,
+                    fontFamily = SfPro,
+                    fontSize = 15.sp
+                ),
+                decorationBox = { innerTextField ->
+                    if (text.isEmpty()) {
+                        Text(
+                            text = "Escribe tu mensaje...",
+                            color = SyntraGray.copy(alpha = 0.6f),
+                            fontFamily = SfPro,
+                            fontSize = 15.sp
+                        )
+                    }
+                    innerTextField()
+                }
             )
 
-            Spacer(modifier = Modifier.width(10.dp))
+            Spacer(modifier = Modifier.width(8.dp))
 
-            // Texto del placeholder (sin OutlinedTextField)
-            Text(
-                text = "Describe el problema",
-                color = SyntraGray.copy(alpha = 0.6f),
-                fontFamily = SfPro,
-                fontSize = 15.sp,
-                modifier = Modifier.weight(1f)
-            )
-
-            Spacer(modifier = Modifier.width(10.dp))
-
-            // Ícono de enviar
-            Icon(
-                imageVector = Icons.Outlined.Send,
-                contentDescription = "Enviar",
-                tint = Color.Black,
-                modifier = Modifier.size(22.dp)
-            )
+            IconButton(onClick = onSend) {
+                Icon(
+                    imageVector = Icons.Outlined.Send,
+                    contentDescription = "Enviar",
+                    tint = SyntraBlue,
+                    modifier = Modifier.size(24.dp)
+                )
+            }
         }
     }
 }

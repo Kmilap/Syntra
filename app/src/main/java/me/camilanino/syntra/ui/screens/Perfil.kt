@@ -185,6 +185,7 @@ private fun BigHeader(
 fun ProfileScreenFirebase(
     navController: NavController,
     fromMenu: Boolean = false,
+    fromChatbot: Boolean = false,
     onForgotPassword: () -> Unit = {},
     onLogout: () -> Unit = {}
 
@@ -237,14 +238,13 @@ fun ProfileScreenFirebase(
         BigHeader(
             title = "Perfil",
             onBack = {
-                if (fromMenu) {
-                    navController.navigate("menu_user")
-                } else {
-                    navController.navigate("main_page/usuario")
+                when {
+                    fromChatbot -> navController.navigate("chatbot_screen/usuario?fromMenu=false")
+                    fromMenu -> navController.navigate("menu_user")
+                    else -> navController.navigate("main_page/usuario")
                 }
             }
         )
-
 
 
 

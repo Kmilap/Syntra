@@ -86,7 +86,8 @@ fun ReportesScreen(
     navController: NavController,
     role: String,
     fromMenu: Boolean = false,
-    fromMap: Boolean = false
+    fromMap: Boolean = false,
+    fromChatbot: Boolean = false
 ) {
     val scope = rememberCoroutineScope()
 
@@ -152,9 +153,18 @@ fun ReportesScreen(
                     .size(22.dp)
                     .clickable {
                         when {
+                            fromChatbot -> navController.navigate("chatbot_screen/$role?fromMenu=false")
                             fromMap -> navController.navigate("mapa_screen/$role?fromMenu=false&fromMap=true")
-                            fromMenu -> if (role == "usuario") navController.navigate("menu_user") else navController.navigate("menu_transito")
-                            else -> if (role == "usuario") navController.navigate("main_page/usuario") else navController.navigate("main_page/agente")
+                            fromMenu -> if (role == "usuario") {
+                                navController.navigate("menu_user")
+                            } else {
+                                navController.navigate("menu_transito")
+                            }
+                            else -> if (role == "usuario") {
+                                navController.navigate("main_page/usuario")
+                            } else {
+                                navController.navigate("main_page/agente")
+                            }
                         }
                     }
             )
