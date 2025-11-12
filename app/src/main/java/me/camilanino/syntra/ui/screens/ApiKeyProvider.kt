@@ -9,7 +9,7 @@ object ApiKeyProvider {
             val properties = Properties()
             val inputStream = context.assets.open("local.properties")
             properties.load(inputStream)
-            properties.getProperty("OPENAI_API_KEY") // <-- aquí está el cambio importante
+            properties.getProperty("OPENAI_API_KEY")
         } catch (e: Exception) {
             e.printStackTrace()
             null

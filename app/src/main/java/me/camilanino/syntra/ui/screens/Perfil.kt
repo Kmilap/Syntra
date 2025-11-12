@@ -30,7 +30,7 @@ import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 
-/* ====== PALETA (misma que tu registro) ====== */
+/* ====== PALETA ====== */
 private val SyntraBlue   = Color(0xFF4D81E7)
 private val SyntraSalmon = Color(0xD9E74C3C)
 private val SyntraWhite  = Color(0xFFF1F2F8)
@@ -202,7 +202,7 @@ fun ProfileScreenFirebase(
     var loading by remember { mutableStateOf(true) }
     var message by remember { mutableStateOf<String?>(null) }
 
-    // 🔹 Cargar datos del usuario
+    // Cargar datos del usuario
     LaunchedEffect(Unit) {
         if (uid != null) {
             try {
@@ -229,7 +229,7 @@ fun ProfileScreenFirebase(
         return
     }
 
-    // 🔹 Interfaz principal (tu diseño original)
+    //  Interfaz principal
     Box(
         modifier = Modifier
             .fillMaxSize()

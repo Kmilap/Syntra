@@ -10,7 +10,7 @@ import okhttp3.logging.HttpLoggingInterceptor
 import com.squareup.moshi.Json
 
 // ============================================================
-// 🔹 ESTRUCTURAS DE DATOS PARA LA API DE OPENAI
+// ESTRUCTURAS DE DATOS PARA LA API DE OPENAI
 // ============================================================
 
 data class ChatRequestAPI(
@@ -32,7 +32,7 @@ data class ChatChoiceAPI(
 )
 
 // ============================================================
-// 🔹 INTERFAZ RETROFIT: ENVÍA MENSAJE A OPENAI
+//  INTERFAZ RETROFIT: ENVÍA MENSAJE A OPENAI
 // ============================================================
 
 interface OpenAIServiceSyntra {
@@ -42,7 +42,7 @@ interface OpenAIServiceSyntra {
 }
 
 // ============================================================
-// 🔹 FUNCIÓN PARA CREAR LA INSTANCIA DEL SERVICIO
+// FUNCIÓN PARA CREAR LA INSTANCIA DEL SERVICIO
 // ============================================================
 
 fun createOpenAIServiceSyntra(apiKey: String): OpenAIServiceSyntra {

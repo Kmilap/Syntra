@@ -40,13 +40,6 @@ import org.json.JSONObject
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
-/* ====== (Opcional) Activa Coil si quieres miniaturas ====
-   1) build.gradle (app): implementation("io.coil-kt:coil-compose:2.6.0")
-   2) descomenta los imports y el bloque de previews más abajo
-*/
-// import coil.compose.AsyncImage
-// import androidx.compose.foundation.layout.Arrangement
-// import androidx.compose.foundation.layout.FlowRow
 
 /* ====== FUENTES Y COLORES ====== */
 private val SfProRounded = FontFamily(Font(R.font.sf_pro_rounded_regular))
@@ -60,7 +53,7 @@ private val SyntraRed = Color(0xFFE74C3C)
 
 
 
-// 🔹 Convierte coordenadas a dirección textual usando Google Geocoding API
+// Convierte coordenadas a dirección textual usando Google Geocoding API
 suspend fun getAddressFromCoordinates(lat: Double, lng: Double, apiKey: String): String? {
     return withContext(Dispatchers.IO) {
         try {
@@ -89,13 +82,14 @@ fun ReportesScreen(
     fromMap: Boolean = false,
     fromChatbot: Boolean = false
 ) {
+    val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
     var selectedEstado by remember { mutableStateOf("Operativo") }
     var address by remember { mutableStateOf("") }
     var description by remember { mutableStateOf("") }
     var latLng: Pair<Double, Double>? by remember { mutableStateOf(null) } // ubicación standby
-    // ✅ Escucha activa: se actualiza cada vez que el backStack cambia
+    // ✅ Se actualiza cada vez que el backStack cambia
     val currentBackStackEntry = navController.currentBackStackEntry
     LaunchedEffect(currentBackStackEntry?.savedStateHandle) {
         currentBackStackEntry?.savedStateHandle?.let { handle ->
@@ -104,7 +98,7 @@ fun ReportesScreen(
 
             if (lat != null && lng != null) {
                 latLng = lat to lng
-                // 🔹 Intentamos obtener dirección real
+                //  obtener dirección real
                 val apiKey = "AIzaSyDXa5WiX58mev1nBbR6vi1SkpUD20gNoeM"
                 val addressText = getAddressFromCoordinates(lat, lng, apiKey)
 
@@ -119,7 +113,7 @@ fun ReportesScreen(
 
 
 
-    // fotos seleccionadas (se eligen con el icono del campo DESCRIPCIÓN)
+    // fotos seleccionadas
     var selectedPhotos by remember { mutableStateOf<List<Uri>>(emptyList()) }
 
     var loading by remember { mutableStateOf(false) }
@@ -129,7 +123,7 @@ fun ReportesScreen(
     val pickImagesLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetMultipleContents()
     ) { uris ->
-        selectedPhotos = uris.take(6) // límite opcional
+        selectedPhotos = uris.take(6)
     }
 
     Column(
@@ -266,7 +260,7 @@ fun ReportesScreen(
                     }
                 )
             },
-            // si prefieres que el usuario vea cuántas hay, puedes usar trailingIcon:
+
             trailingIcon = {
                 if (selectedPhotos.isNotEmpty()) {
                     Text(
@@ -318,14 +312,14 @@ fun ReportesScreen(
         /* ====== BOTÓN REPORTAR ====== */
         Button(
             onClick = {
+
                 scope.launch {
                     if (address.isBlank() || description.isBlank()) {
                         statusMsg = "Completa la ubicación y la descripción."
                         return@launch
                     }
-                    loading = true
 
-                    // 1) Crear reporte
+                    loading = true
                     val res = ReportRepository.createReport(
                         address = address,
                         lat = latLng?.first,
@@ -335,7 +329,6 @@ fun ReportesScreen(
                         role = role
                     )
 
-                    // 2) Subir fotos si hay
                     if (res.isSuccess) {
                         val reportId = res.getOrNull()!!
                         if (selectedPhotos.isNotEmpty()) {
@@ -346,7 +339,18 @@ fun ReportesScreen(
                         }
                         statusMsg = "Reporte enviado ✅"
 
-                        // 3) Limpiar UI
+                        //  lógica de notificación FCM
+                        val accessToken = withContext(Dispatchers.IO) {
+                            GenerateAccessToken.getAccessToken(context)
+                        }
+
+                        if (accessToken != null) {
+                            val deviceToken = "c7Fw537QSHKXT4CQ_WTrQT:APA91bGhxDziCKJQTH_WVeg2QB6CKn3FH1KdGjZ7zEsQHJWuHJUxKWWKyrzdg3i16igck4GsBoA_8w2N7O7RLh-NhGgVFf51HgCu0bJSMTXqu0uT17H2rlM" // tu token real
+                            withContext(Dispatchers.IO) {
+                                FcmHttpSender.sendNotification(accessToken, deviceToken)
+                            }
+                        }
+
                         selectedEstado = "Operativo"
                         address = ""
                         description = ""

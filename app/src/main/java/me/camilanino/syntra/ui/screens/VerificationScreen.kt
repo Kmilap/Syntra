@@ -87,15 +87,15 @@ private fun HeaderVerification(
 
 
 /* =============================================================================
- * VERIFICATION SCREEN (solo email reset, editable)
+ * VERIFICATION SCREEN
  * ===========================================================================*/
 @Composable
 fun VerificationScreen(
     initialEmail: String = "",
-    onSendReset: suspend (email: String) -> Result<Unit>, // manda el link (sendPasswordResetEmail)
-    onUseAnotherMethod: () -> Unit = {},                  // navegar a ChangePasswordScreen
-    onAfterSend: () -> Unit = {},                       // opcional (p.ej. volver al Login)
-    onBackClick: (() -> Unit)? = null // ← agrégalo aquí
+    onSendReset: suspend (email: String) -> Result<Unit>,
+    onUseAnotherMethod: () -> Unit = {},
+    onAfterSend: () -> Unit = {},
+    onBackClick: (() -> Unit)? = null
 ) {
     var email by remember { mutableStateOf(initialEmail) }
     var isLoading by remember { mutableStateOf(false) }

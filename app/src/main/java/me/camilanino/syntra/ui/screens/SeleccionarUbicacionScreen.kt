@@ -48,7 +48,7 @@ fun SeleccionarUbicacionScreen(navController: NavController) {
             Button(
                 onClick = {
                     selectedLocation?.let { latLng ->
-                        // ✅ Guardar coordenadas en el back stack
+                        // Guardar coordenadas en el back stack
                         navController.previousBackStackEntry
                             ?.savedStateHandle
                             ?.apply {
@@ -56,7 +56,7 @@ fun SeleccionarUbicacionScreen(navController: NavController) {
                                 set("selected_lng", latLng.longitude)
                             }
 
-                        // ✅ Volver al ReportesScreen
+
                         navController.popBackStack()
                     }
                 },

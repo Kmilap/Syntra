@@ -36,7 +36,7 @@ import androidx.compose.foundation.text.KeyboardOptions as FKeyboardOptions
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.ArrowBack
 
-/* ====== PALETA (colores consistentes con Syntra) ====== */
+/* ====== PALETA ====== */
 private val SyntraBlue   = Color(0xFF4D81E7)
 private val SyntraSalmon = Color(0xD9E74C3C)
 private val SyntraWhite  = Color(0xFFF1F2F8)
@@ -192,8 +192,8 @@ fun RegisterScreenT(
     val db = FirebaseFirestore.getInstance()
 
     var email by remember { mutableStateOf("") }
-    var document by remember { mutableStateOf("") } // cédula
-    var plate by remember { mutableStateOf("") }    // "username" en tu UI original, pero aquí es placa
+    var document by remember { mutableStateOf("") }
+    var plate by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var status by remember { mutableStateOf<String?>(null) }
     var loading by remember { mutableStateOf(false) }

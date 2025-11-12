@@ -54,7 +54,7 @@ private val SyntraBackground = Color(0xFFF2F4F7)
 @Composable
 fun HistorialScreen(
     navController: NavController,
-    role: String,                     // "usuario" | "agente"
+    role: String,
     fromMenu: Boolean = false,
     fromMap: Boolean = false,
     fromChatbot: Boolean = false
@@ -139,7 +139,7 @@ fun HistorialScreen(
                             }
                         },
                         onDelete = { id ->
-                            // 🔴 Borra inmediatamente al tocar el ícono de basura
+                            // 🔴 Borra inmediatamente
                             scope.launch {
                                 toast = null
                                 val res = ReportRepository.deleteReport(id)
@@ -171,10 +171,7 @@ fun HistorialScreen(
                     scope.launch {
                         val res = ReportRepository.updateReportStatus(r.id, newUi)
                         selected = null
-                        // Vuelve a cargar la lista
-                        // (reusa tu función load() del scope de pantalla)
-                        // Ojo: si 'load()' está adentro, llámala aquí:
-                        // load()
+
                     }
                 }
             }
@@ -229,12 +226,6 @@ private fun TopBar(
             Text("Historial", color = Color.Black, fontSize = 23.sp, fontWeight = FontWeight.Bold, fontFamily = SfPro)
         }
 
-        Icon(
-            painter = painterResource(id = R.drawable.ic_menu),
-            contentDescription = "Menú",
-            tint = Color.Black,
-            modifier = Modifier.size(28.dp)
-        )
     }
 }
 
@@ -301,7 +292,7 @@ private fun ReportCard(
             verticalAlignment = Alignment.CenterVertically
         ) {
 
-            // ===== IZQUIERDA (elástica) =====
+            // ===== IZQUIERDA =====
             Row(
                 modifier = Modifier.weight(1f),
                 verticalAlignment = Alignment.CenterVertically
@@ -339,14 +330,14 @@ private fun ReportCard(
 
             Spacer(Modifier.width(10.dp))
 
-            // ===== DERECHA (ancho controlado) =====
+            // ===== DERECHA =====
             Row(
                 modifier = Modifier.widthIn(min = 150.dp, max = 210.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 if (role == "agente") {
-                    // Basura con área táctil estable (no se achica)
+                    // Basura
                     IconButton(
                         onClick = { onDelete(reporte.id) },
                         modifier = Modifier.size(36.dp)

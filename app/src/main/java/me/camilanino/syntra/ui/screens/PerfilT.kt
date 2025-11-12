@@ -35,6 +35,8 @@ private val SyntraBlue   = Color(0xFF4D81E7)
 private val SyntraSalmon = Color(0xD9E74C3C)
 private val SyntraWhite  = Color(0xFFF1F2F8)
 private val SyntraGray   = Color(0xFF6C7278)
+private val SyntraGreen  = Color(0xFF63B58D)
+private val SyntraGreenDark = Color(0xFF33B06B)
 
 /* ====== TextField reutilizable ====== */
 @Composable
@@ -69,7 +71,7 @@ private fun LabeledTextField(
                 focusedContainerColor = Color.White,
                 unfocusedContainerColor = Color.White,
                 disabledContainerColor = Color(0xFFF5F5F5),
-                cursorColor = SyntraBlue
+                cursorColor = SyntraGreen
             ),
             shape = RoundedCornerShape(12.dp),
             modifier = Modifier
@@ -120,7 +122,7 @@ private fun BigHeader(
         modifier = Modifier
             .fillMaxWidth()
             .height(220.dp)
-            .background(SyntraSalmon)
+            .background(SyntraGreen)
     ) {
         if (onBack != null) {
             IconButton(
@@ -164,7 +166,7 @@ private fun BigHeader(
                 lineTo(0f, h)
                 close()
             }
-            drawPath(path, SyntraSalmon)
+            drawPath(path, SyntraGreenDark)
         }
     }
 }
@@ -189,7 +191,7 @@ fun ProfileScreenTransito(
     var loading by remember { mutableStateOf(true) }
     var message by remember { mutableStateOf<String?>(null) }
 
-    // 🔹 Cargar perfil desde Firestore
+    // Cargar perfil desde Firestore
     LaunchedEffect(Unit) {
         if (uid == null) {
             message = "No hay sesión activa"
@@ -298,8 +300,8 @@ fun ProfileScreenTransito(
                     onClick = { message = "Datos listos para actualizar." },
                     modifier = Modifier.weight(1f).height(48.dp),
                     shape = RoundedCornerShape(14.dp),
-                    colors = ButtonDefaults.outlinedButtonColors(contentColor = SyntraSalmon),
-                    border = BorderStroke(1.dp, SyntraSalmon)
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = SyntraGreen),
+                    border = BorderStroke(1.dp, SyntraGreen)
                 ) {
                     Text("Actualizar", fontWeight = FontWeight.SemiBold)
                 }
@@ -327,7 +329,7 @@ fun ProfileScreenTransito(
                     },
                     modifier = Modifier.weight(1f).height(48.dp),
                     shape = RoundedCornerShape(14.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = SyntraSalmon)
+                    colors = ButtonDefaults.buttonColors(containerColor = SyntraGreen)
                 ) {
                     Text("Guardar", color = Color.White, fontWeight = FontWeight.SemiBold)
                 }

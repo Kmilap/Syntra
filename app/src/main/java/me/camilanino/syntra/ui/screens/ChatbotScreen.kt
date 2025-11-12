@@ -5,19 +5,25 @@ import androidx.annotation.RequiresApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.Send
-import androidx.compose.material3.*
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -27,8 +33,9 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import kotlinx.coroutines.launch
 import me.camilanino.syntra.R
-import androidx.compose.runtime.remember
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.imePadding
+
 /* ====== FUENTES Y COLORES ====== */
 private val SfProRounded = FontFamily(Font(R.font.sf_pro_rounded_regular))
 private val SfPro = FontFamily(Font(R.font.sf_pro))
@@ -58,11 +65,11 @@ fun ChatbotScreen(navController: NavController, role: String, fromMenu: Boolean 
     var messages by remember { mutableStateOf(listOf<ChatMessage>()) }
     var inputText by remember { mutableStateOf("") }
 
-    // 🔹 Clave de API (la obtendremos de tu ApiKeyProvider)
+    // 🔹 Clave de API ( ApiKeyProvider)
     val context = LocalContext.current
     val apiKey = remember { ApiKeyProvider.getOpenAIKey(context) ?: "" }
 
-    // Mensaje inicial del bot
+    // Mensaje inicial
     LaunchedEffect(role) {
         messages = messages + ChatbotBrain.getWelcomeMessage(role)
     }
@@ -71,11 +78,19 @@ fun ChatbotScreen(navController: NavController, role: String, fromMenu: Boolean 
         modifier = Modifier
             .fillMaxSize()
             .background(SyntraWhite)
+            .imePadding()
     ) {
         ChatHeader(navController, role, fromMenu)
-        Spacer(Modifier.height(4.dp))
 
-        ChatMessages(messages = messages, navController = navController)
+        // Lista que ocupa todo el alto disponible
+        ChatMessages(
+            messages = messages,
+            navController = navController,
+            modifier = Modifier
+                .weight(1f)
+                .fillMaxWidth()
+        )
+
 
         ChatInputBar(
             text = inputText,
@@ -147,19 +162,28 @@ fun ChatHeader(navController: NavController, role: String, fromMenu: Boolean = f
 
 /* ====== CUERPO DEL CHAT ====== */
 @Composable
-fun ChatMessages(messages: List<ChatMessage>, navController: NavController, modifier: Modifier = Modifier) {
-    val scrollState = rememberScrollState()
+fun ChatMessages(
+    messages: List<ChatMessage>,
+    navController: NavController,
+    modifier: Modifier = Modifier
+) {
+    val listState = rememberLazyListState()
+
+
     LaunchedEffect(messages.size) {
-        scrollState.animateScrollTo(scrollState.maxValue + 200)
+        if (messages.isNotEmpty()) {
+            listState.animateScrollToItem(messages.lastIndex)
+        }
     }
 
-    Column(
+    LazyColumn(
+        state = listState,
         modifier = modifier
-            .background(SyntraLightGray)
-            .verticalScroll(scrollState)
-            .padding(horizontal = 16.dp, vertical = 10.dp)
+            .background(SyntraLightGray),
+        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 10.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        for (msg in messages) {
+        items(messages) { msg ->
             ChatBubble(msg, navController)
         }
     }
@@ -218,13 +242,14 @@ fun ChatBubble(message: ChatMessage, navController: NavController) {
     }
 }
 
-/* ====== INPUT BAR ====== */
+/* ====== INPUT BAR (FIJA ABAJO) ====== */
 @Composable
 fun ChatInputBar(text: String, onTextChange: (String) -> Unit, onSend: () -> Unit) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
             .background(SyntraLightGray)
+            .navigationBarsPadding()
             .padding(horizontal = 12.dp, vertical = 10.dp)
     ) {
         Row(

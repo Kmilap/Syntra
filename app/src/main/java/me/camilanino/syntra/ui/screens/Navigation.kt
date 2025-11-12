@@ -57,7 +57,12 @@ fun AppNavHost() {
         }
 
         // === VERIFICAR CONTRASEÑA (REAL) ===
-        composable("verify_password") {
+        composable(
+            route = "verify_password?fromProfile={fromProfile}",
+            arguments = listOf(navArgument("fromProfile") { type = NavType.BoolType; defaultValue = false })
+        ) { backStackEntry ->
+            val fromProfile = backStackEntry.arguments?.getBoolean("fromProfile") ?: false
+
             VerificationScreen(
                 onSendReset = { email ->
                     try {
@@ -69,12 +74,23 @@ fun AppNavHost() {
                     }
                 },
                 onAfterSend = {
-                    nav.navigate("login_user") {
-                        popUpTo("verify_password") { inclusive = true }
+                    // Mantén lo que ya hace
+                    if (!fromProfile) {
+                        nav.navigate("login_user") {
+                            popUpTo("verify_password") { inclusive = true }
+                        }
+                    } else {
+                        nav.navigate("profile_user") {
+                            popUpTo("verify_password") { inclusive = true }
+                        }
                     }
                 },
                 onBackClick = {
-                    nav.popBackStack("login_user", inclusive = false)
+                    if (!fromProfile) {
+                        nav.popBackStack("login_user", inclusive = false)
+                    } else {
+                        nav.popBackStack("profile_user", inclusive = false)
+                    }
                 }
             )
         }
@@ -115,7 +131,12 @@ fun AppNavHost() {
         }
 
         // === VERIFICAR CONTRASEÑA (TRÁNSITO) ===
-        composable("verify_password_t") {
+        composable(
+            route = "verify_password_t?fromProfile={fromProfile}",
+            arguments = listOf(navArgument("fromProfile") { type = NavType.BoolType; defaultValue = false })
+        ) { backStackEntry ->
+            val fromProfile = backStackEntry.arguments?.getBoolean("fromProfile") ?: false
+
             VerificationScreen(
                 onSendReset = { email ->
                     try {
@@ -127,12 +148,22 @@ fun AppNavHost() {
                     }
                 },
                 onAfterSend = {
-                    nav.navigate("login_transito") {
-                        popUpTo("verify_password_t") { inclusive = true }
+                    if (!fromProfile) {
+                        nav.navigate("login_transito") {
+                            popUpTo("verify_password_t") { inclusive = true }
+                        }
+                    } else {
+                        nav.navigate("profile_transito") {
+                            popUpTo("verify_password_t") { inclusive = true }
+                        }
                     }
                 },
                 onBackClick = {
-                    nav.popBackStack("login_transito", inclusive = false)
+                    if (!fromProfile) {
+                        nav.popBackStack("login_transito", inclusive = false)
+                    } else {
+                        nav.popBackStack("profile_transito", inclusive = false)
+                    }
                 }
             )
         }
@@ -232,7 +263,7 @@ fun AppNavHost() {
                 navController = nav,
                 fromMenu = fromMenu,
                 fromChatbot = fromChatbot,
-                onForgotPassword = { nav.navigate("verify_password") },
+                onForgotPassword = { nav.navigate("verify_password?fromProfile=true") }, // 🔹 CAMBIA AQUÍ
                 onLogout = {
                     nav.navigate("welcome") {
                         popUpTo("main_page") { inclusive = true }
@@ -241,7 +272,7 @@ fun AppNavHost() {
             )
         }
 
-// === PERFIL (TRÁNSITO) ===
+        // === PERFIL (TRÁNSITO) ===
         composable(
             route = "profile_transito?fromMenu={fromMenu}&fromChatbot={fromChatbot}",
             arguments = listOf(
@@ -256,7 +287,7 @@ fun AppNavHost() {
                 navController = nav,
                 fromMenu = fromMenu,
                 fromChatbot = fromChatbot,
-                onForgotPassword = { nav.navigate("verify_password") },
+                onForgotPassword = { nav.navigate("verify_password_t?fromProfile=true") },
                 onLogout = {
                     nav.navigate("welcome") {
                         popUpTo("main_page") { inclusive = true }
@@ -321,11 +352,6 @@ fun AppNavHost() {
         }
 
 
-
-
-
-
-
         // === FEEDBACK SCREEN (COMPARTIDA) ===
         composable(
             route = "feedback_screen/{role}?fromMenu={fromMenu}&fromChatbot={fromChatbot}",
@@ -342,28 +368,29 @@ fun AppNavHost() {
             FeedbackPage(navController = nav, role = role, fromMenu = fromMenu, fromChatbot = fromChatbot)
         }
 
-
+        // === MAPA SELECCIONAR UBICACIÓN ===
         composable("select_location_screen") {
             SeleccionarUbicacionScreen(navController= nav)
         }
 
-
-
-
-
-
-
-
-
-
-
         // === MENÚS ===
         composable("menu_user") {
-            Menu(navController = nav) // 🔹 reemplazo del placeholder
+            Menu(navController = nav) //
         }
 
         composable("menu_transito") {
-            MenuT(navController = nav) // 🔹 reemplazo del placeholder
+            MenuT(navController = nav) //
+
         }
+        // === NOTIFICACIONES (COMPARTIDA) ===
+        composable(
+            route = "notifications_screen/{role}",
+            arguments = listOf(navArgument("role") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val role = backStackEntry.arguments?.getString("role") ?: "usuario"
+            NotificationScreen(navController = nav, role = role)
+        }
+
+
     }
 }

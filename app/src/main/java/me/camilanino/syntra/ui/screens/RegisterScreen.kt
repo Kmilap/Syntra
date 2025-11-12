@@ -35,7 +35,7 @@ import androidx.compose.foundation.text.KeyboardOptions as FKeyboardOptions
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.ArrowBack
 
-/* ====== PALETA (colores consistentes con Syntra) ====== */
+/* ====== PALETA ====== */
 private val SyntraBlue   = Color(0xFF4D81E7)
 private val SyntraSalmon = Color(0xD9E74C3C)
 private val SyntraWhite  = Color(0xFFF1F2F8)
@@ -284,8 +284,8 @@ fun RegisterScreen(
                                             loading = false
 
 
-                                            auth.signOut()          // opcional: forzar login limpio
-                                            onLoginNavigate()       // ⬅️ navega de vuelta al Login
+                                            auth.signOut()
+                                            onLoginNavigate()
                                         }
                                         .addOnFailureListener {
                                             status = "Error guardando perfil: ${it.message}"

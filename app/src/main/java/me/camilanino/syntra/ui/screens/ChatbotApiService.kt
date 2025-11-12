@@ -6,13 +6,12 @@ import me.camilanino.syntra.ui.screens.ChatbotSessionManager
 
 /* ============================================================
  * CHATBOT API SERVICE — CONEXIÓN CON OPENAI DESDE SYNTRA
- * Versión híbrida compatible con el SessionManager
  * ============================================================ */
 
 suspend fun getSyntraAIResponse(apiKey: String, userMessage: String, role: String): String {
     return withContext(Dispatchers.IO) {
         try {
-            // Crear instancia del servicio desde OpenAIService.kt
+            // OpenAIService.kt
             val service = createOpenAIServiceSyntra(apiKey)
 
             // Normalizar el texto del usuario
@@ -42,7 +41,7 @@ suspend fun getSyntraAIResponse(apiKey: String, userMessage: String, role: Strin
                 SyntraBot:
             """.trimIndent()
 
-            // Construcción del cuerpo del mensaje (reutilizando las clases del OpenAIService)
+            // Construcción del cuerpo del mensaje
             val request = ChatRequestAPI(
                 model = "gpt-3.5-turbo",
                 messages = listOf(
@@ -51,7 +50,7 @@ suspend fun getSyntraAIResponse(apiKey: String, userMessage: String, role: Strin
                 )
             )
 
-            // Llamada al endpoint de OpenAI
+            // endpoint
             val response = service.getChatCompletion(request)
 
             // Procesar respuesta
@@ -62,7 +61,7 @@ suspend fun getSyntraAIResponse(apiKey: String, userMessage: String, role: Strin
             ChatbotSessionManager.addMessage(role, "user", userMessage)
             ChatbotSessionManager.addMessage(role, "bot", aiResponse)
 
-            // Devolver la respuesta generada
+            // Devolver
             aiResponse
 
         } catch (e: Exception) {

@@ -21,14 +21,14 @@ import java.util.UUID
 data class ReportesUiModel(
     val id: String = "",
     val reporterUid: String = "",
-    val role: String = "",                     // "usuario" | "transito"
-    val status: String = "",                   // "operativo" | "inspeccion" | "falla_critica"
+    val role: String = "",
+    val status: String = "",
     val address: String = "",
     val description: String = "",
     val lat: Double? = null,
     val lng: Double? = null,
     val photosCount: Long = 0L,
-    val photoUrls: List<String> = emptyList(), // URLs directas
+    val photoUrls: List<String> = emptyList(),
     val createdAt: Timestamp? = null,
     val updatedAt: Timestamp? = null,
 ) {
@@ -58,7 +58,7 @@ object ReportRepository {
     private val storage by lazy { FirebaseStorage.getInstance() }
     private val auth by lazy { FirebaseAuth.getInstance() }
 
-    /* ------------------- Crear + (opcional) subir fotos ------------------- */
+    /* ------------------- Crear + subir fotos ------------------- */
     suspend fun createReportAndUploadPhotos(
         address: String,
         lat: Double? = null,

@@ -33,9 +33,9 @@ fun SplashScreen(onSplashFinished: () -> Unit) {
         ), label = ""
     )
 
-    // Lanzar efecto que espera unos segundos y luego pasa al Welcome
+    // Lanzar efecto y luego pasa al Welcome
     LaunchedEffect(Unit) {
-        delay(4000) // duración de la pantalla de carga (4 s)
+        delay(4000) //  (4 s)
         onSplashFinished()
     }
 
@@ -46,13 +46,13 @@ fun SplashScreen(onSplashFinished: () -> Unit) {
         contentAlignment = Alignment.Center
     ) {
         Image(
-            painter = painterResource(id = R.drawable.mapita), // tu imagen del mapa
+            painter = painterResource(id = R.drawable.mapita),
             contentDescription = "Mapa animado",
             contentScale = ContentScale.Crop,
             modifier = Modifier.fillMaxSize()
         )
 
-        // Capa animada de brillo tipo “puntos encendidos”
+
         Box(
             modifier = Modifier
                 .fillMaxSize()

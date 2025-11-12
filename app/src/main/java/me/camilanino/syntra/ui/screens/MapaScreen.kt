@@ -36,7 +36,7 @@ import com.google.maps.android.compose.rememberCameraPositionState
 private val SfPro = FontFamily(Font(R.font.sf_pro))
 private val SfProRounded = FontFamily(Font(R.font.sf_pro_rounded_regular))
 
-/* ====== PALETA SINTRA ====== */
+/* ====== PALETA SYNTRA ====== */
 private val SyntraRed = Color(0xFFE74C3C)
 private val SyntraYellow = Color(0xFFE3C04D)
 private val SyntraGreen = Color(0xFF63B58D)
@@ -59,10 +59,10 @@ fun MapaScreen(
             position = CameraPosition.fromLatLngZoom(santanderCenter, 13.5f)
         }
 
-        // 🔹 Estado local para guardar los reportes
+        //  Estado local para guardar los reportes
         var reports by remember { mutableStateOf<List<ReportesUiModel>>(emptyList()) }
 
-        // 🔹 Cargar los reportes al abrir la pantalla
+        // Cargar los reportes al abrir la pantalla
         LaunchedEffect(Unit) {
             val res = ReportRepository.getLast24hReports()
             if (res.isSuccess) {
@@ -78,7 +78,7 @@ fun MapaScreen(
             reports.forEach { report ->
                 val position = LatLng(report.lat ?: 0.0, report.lng ?: 0.0)
 
-                // Color del marcador según estado
+                // Color del marcador
                 val hue = when (report.status) {
                     "operativo" -> com.google.android.gms.maps.model.BitmapDescriptorFactory.HUE_GREEN
                     "inspeccion" -> com.google.android.gms.maps.model.BitmapDescriptorFactory.HUE_YELLOW
@@ -96,7 +96,7 @@ fun MapaScreen(
         }
 
 
-        // === Flecha de retroceso funcional ===
+        // === Flecha de retroceso ===
         IconButton(
             onClick = {
                 when {
@@ -148,9 +148,9 @@ fun MapaScreen(
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 // === Estados de semáforos ===
-                EstadoItem(color = SyntraRed, estado = "Falla crítica", ubicacion = "Av. Libertad y Calle 20")
-                EstadoItem(color = SyntraYellow, estado = "En inspección", ubicacion = "Calle 5 y Calle 12")
-                EstadoItem(color = SyntraGreen, estado = "Operativo", ubicacion = "Av. Juárez y Calle 1")
+                EstadoItem(color = SyntraRed, estado = "Falla crítica", ubicacion = "Intermitente o apagado")
+                EstadoItem(color = SyntraYellow, estado = "En inspección", ubicacion = "En reparación")
+                EstadoItem(color = SyntraGreen, estado = "Operativo", ubicacion="Funcional")
 
                 Spacer(Modifier.height(12.dp))
 

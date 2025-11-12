@@ -9,18 +9,24 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.*
 import androidx.compose.ui.graphics.*
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -35,10 +41,8 @@ private val BackgroundGray = Color(0xFFECECEC)
 private val TextDark = Color(0xFF2B2B2B)
 
 /* ====== TARJETAS ====== */
-
 @Composable
 private fun CardItem(title: String, onClick: () -> Unit) {
-    // Ícono según el título
     val icon = when (title) {
         "Hacer reportes" -> Icons.Outlined.AssignmentTurnedIn
         "Mapa" -> Icons.Outlined.Map
@@ -81,7 +85,6 @@ private fun CardItem(title: String, onClick: () -> Unit) {
                     .size(48.dp)
                     .padding(bottom = 12.dp)
             )
-
             Text(
                 text = title,
                 color = TextDark,
@@ -93,23 +96,60 @@ private fun CardItem(title: String, onClick: () -> Unit) {
     }
 }
 
-
 /* ====== BARRA DE BÚSQUEDA ====== */
 @Composable
-private fun CustomSearchBar() {
+private fun CustomSearchBar(
+    query: String,
+    onQueryChange: (String) -> Unit,
+    onSearch: () -> Unit
+) {
+    val focus = LocalFocusManager.current
+
     OutlinedTextField(
-        value = "",
-        onValueChange = {},
-        placeholder = { Text("Busca servicios", color = SyntraGray.copy(alpha = 0.7f)) },
+        value = query,
+        onValueChange = onQueryChange,
+        placeholder = {
+            Text(
+                text = "Busca servicios",
+                color = SyntraGray.copy(alpha = 0.7f)
+            )
+        },
         leadingIcon = {
-            Icon(Icons.Filled.Search, contentDescription = "Buscar", tint = SyntraGray)
+            Icon(
+                imageVector = Icons.Filled.Search,
+                contentDescription = "Buscar",
+                tint = SyntraGray
+            )
+        },
+        trailingIcon = {
+            if (query.isNotBlank()) {
+                IconButton(
+                    onClick = {
+                        onQueryChange("")
+                        focus.clearFocus()
+                    }
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.Close,
+                        contentDescription = "Limpiar",
+                        tint = SyntraGray
+                    )
+                }
+            }
         },
         singleLine = true,
+        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+        keyboardActions = KeyboardActions(
+            onSearch = {
+                focus.clearFocus()
+                onSearch()
+            }
+        ),
         colors = OutlinedTextFieldDefaults.colors(
             focusedBorderColor = Color.Transparent,
             unfocusedBorderColor = Color.Transparent,
             focusedContainerColor = Color.White,
-            unfocusedContainerColor = Color.White,
+            unfocusedContainerColor = Color.White
         ),
         shape = RoundedCornerShape(25.dp),
         modifier = Modifier
@@ -122,12 +162,25 @@ private fun CustomSearchBar() {
 /* ====== PANTALLA PRINCIPAL (MODO TRÁNSITO) ====== */
 @Composable
 fun MenuT(navController: NavController) {
+    // --- Estado de búsqueda ---
+    var query by rememberSaveable { mutableStateOf("") }
+    var lastSearched by rememberSaveable { mutableStateOf("") }
+
+    // Lista base
+    val allItems = remember { listOf("Hacer reportes", "Mapa", "Historial", "Estadísticas") }
+
+    // Filtrado en vivo
+    val filtered = remember(query) {
+        if (query.isBlank()) allItems
+        else allItems.filter { it.contains(query.trim(), ignoreCase = true) }
+    }
+
     Box(
         modifier = Modifier
             .fillMaxSize()
             .background(BackgroundGray)
     ) {
-        // HEADER degradado verde → menta
+        // HEADER degradado
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -151,7 +204,6 @@ fun MenuT(navController: NavController) {
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                // 🔹 Flecha de regreso al Main Page del agente
                 Icon(
                     imageVector = Icons.Outlined.ArrowBackIosNew,
                     contentDescription = "Volver",
@@ -166,7 +218,7 @@ fun MenuT(navController: NavController) {
                         .size(42.dp)
                         .clip(CircleShape)
                         .background(Color.White.copy(alpha = 0.25f))
-                        .clickable { navController.navigate("profile_transito?fromMenu=true") }, // 👈 importante
+                        .clickable { navController.navigate("profile_transito?fromMenu=true") },
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
@@ -176,21 +228,27 @@ fun MenuT(navController: NavController) {
                         modifier = Modifier.size(38.dp)
                     )
                 }
-
             }
 
             Spacer(Modifier.height(22.dp))
 
             Text(
-                text = "Hola, Agente :)",
+                text = "Menú",
                 color = Color.White,
-                fontSize = 26.sp,
+                fontSize = 30.sp,
                 fontWeight = FontWeight.Bold,
-                lineHeight = 30.sp
+                lineHeight = 30.sp,
+                modifier = Modifier.padding(start = 5.dp)
             )
 
             Spacer(Modifier.height(24.dp))
-            CustomSearchBar()
+
+            //  Barra de búsqueda funcional
+            CustomSearchBar(
+                query = query,
+                onQueryChange = { query = it },
+                onSearch = { lastSearched = query }
+            )
         }
 
         // CONTENIDO PRINCIPAL
@@ -205,26 +263,39 @@ fun MenuT(navController: NavController) {
                 verticalArrangement = Arrangement.spacedBy(24.dp),
                 horizontalArrangement = Arrangement.spacedBy(20.dp)
             ) {
-                item {
-                    CardItem("Hacer reportes") {
-                        navController.navigate("report_screen/agente?fromMenu=true")
+                // Ítems filtrados
+                items(filtered.size) { idx ->
+                    when (filtered[idx]) {
+                        "Hacer reportes" -> CardItem("Hacer reportes") {
+                            navController.navigate("report_screen/agente?fromMenu=true")
+                        }
+                        "Mapa" -> CardItem("Mapa") {
+                            navController.navigate("mapa_screen/agente?fromMenu=true")
+                        }
+                        "Historial" -> CardItem("Historial") {
+                            navController.navigate("history_screen/agente?fromMenu=true")
+                        }
+                        "Estadísticas" -> CardItem("Estadísticas") {
+                            navController.navigate("estadisticas_screen/agente")
+                        }
                     }
                 }
-                item {
-                    CardItem("Mapa") {
-                        navController.navigate("mapa_screen/agente?fromMenu=true")
-                    }
-                }
-                item {
-                    CardItem("Historial") {
-                        navController.navigate("history_screen/agente?fromMenu=true")
-                    }
 
-                }
-                item {
-                    CardItem("Estadísticas") {
-                        navController.navigate("estadisticas_screen/agente")
-
+                // Estado vacío
+                if (filtered.isEmpty()) {
+                    item(span = { GridItemSpan(maxLineSpan) }) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(top = 8.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = "Sin resultados para “$query”",
+                                color = SyntraGray.copy(alpha = 0.8f),
+                                fontSize = 14.sp
+                            )
+                        }
                     }
                 }
             }
@@ -239,10 +310,10 @@ fun MenuT(navController: NavController) {
                 .background(
                     brush = Brush.verticalGradient(
                         colors = listOf(
-                            Color(0x00FFFFFF),                         // transparente arriba
-                            SyntraGreen.copy(alpha = 0.85f),           // verde medio intenso
-                            SyntraMint.copy(alpha = 0.9f),             // menta claro
-                            Color(0xFFF2FFF8)                          // base blanca verdosa
+                            Color(0x00FFFFFF),
+                            SyntraGreen.copy(alpha = 0.85f),
+                            SyntraMint.copy(alpha = 0.9f),
+                            Color(0xFFF2FFF8)
                         )
                     )
                 )
@@ -301,4 +372,3 @@ fun MenuT(navController: NavController) {
         }
     }
 }
-

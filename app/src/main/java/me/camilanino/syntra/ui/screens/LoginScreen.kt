@@ -2,6 +2,7 @@ package me.camilanino.syntra.ui.screens
 
 import android.content.Context
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -11,12 +12,13 @@ import androidx.compose.material.icons.outlined.Email
 import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.Visibility
 import androidx.compose.material.icons.outlined.VisibilityOff
+import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
@@ -65,7 +67,7 @@ private fun LabeledTextField(
             placeholder = { Text(placeholder, color = SyntraGray.copy(alpha = 0.7f)) },
             colors = OutlinedTextFieldDefaults.colors(
                 focusedBorderColor = SyntraBlue,
-                unfocusedBorderColor = Color.Transparent,
+                unfocusedBorderColor = SyntraWhite.copy(alpha = 0f),
                 focusedContainerColor = Color.White,
                 unfocusedContainerColor = Color.White,
                 cursorColor = SyntraBlue
@@ -80,10 +82,8 @@ private fun LabeledTextField(
             ),
             trailingIcon = {
                 if (isPassword) {
-                    val icon = if (passwordVisible)
-                        Icons.Outlined.VisibilityOff else Icons.Outlined.Visibility
-                    val desc = if (passwordVisible)
-                        "Ocultar contraseña" else "Mostrar contraseña"
+                    val icon = if (passwordVisible) Icons.Outlined.VisibilityOff else Icons.Outlined.Visibility
+                    val desc = if (passwordVisible) "Ocultar contraseña" else "Mostrar contraseña"
                     IconButton(onClick = { passwordVisible = !passwordVisible }) {
                         Icon(icon, contentDescription = desc, tint = SyntraGray)
                     }
@@ -95,23 +95,26 @@ private fun LabeledTextField(
     }
 }
 
-/* ====== Header simple ====== */
+/* ====== Header  ====== */
 @Composable
-private fun LoginHeader(
-    title: String = "Ingresa en tu cuenta",
-    subtitle: String = "Introduce tu email y contraseña para iniciar sesión",
+private fun HeaderWithWave(
+    title: String,
+    subtitle: String,
+    waveHeightDp: Int = 64,
     onBackClick: (() -> Unit)? = null
 ) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
             .background(SyntraSalmon)
-            .padding(top = 60.dp, bottom = 40.dp, start = 24.dp, end = 24.dp)
+            .wrapContentHeight(),
+        contentAlignment = Alignment.Center
     ) {
-        // Flecha de retroceso
         IconButton(
             onClick = { onBackClick?.invoke() },
-            modifier = Modifier.align(Alignment.TopStart)
+            modifier = Modifier
+                .align(Alignment.TopStart)
+                .padding(top = 40.dp, start = 8.dp)
         ) {
             Icon(
                 imageVector = Icons.Default.ArrowBack,
@@ -120,11 +123,19 @@ private fun LoginHeader(
             )
         }
 
-        // Títulos centrados
         Column(
-            modifier = Modifier.align(Alignment.Center),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 80.dp, bottom = 100.dp, start = 24.dp, end = 24.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
+            Icon(
+                imageVector = Icons.Outlined.Person,
+                contentDescription = null,
+                tint = Color.White,
+                modifier = Modifier.size(48.dp)
+            )
+            Spacer(Modifier.height(12.dp))
             Text(
                 text = title,
                 color = Color.White,
@@ -141,11 +152,29 @@ private fun LoginHeader(
                 textAlign = TextAlign.Center
             )
         }
+
+        Canvas(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(waveHeightDp.dp)
+                .align(Alignment.BottomCenter)
+        ) {
+            val width = size.width
+            val height = size.height
+            val path = Path().apply {
+                moveTo(0f, 0f)
+                quadraticBezierTo(width * 0.25f, height * 0.9f, width * 0.5f, height * 0.6f)
+                quadraticBezierTo(width * 0.75f, height * 0.3f, width * 1.0f, height * 0.8f)
+                lineTo(width, height)
+                lineTo(0f, height)
+                close()
+            }
+            drawPath(path = path, color = SyntraSalmon)
+        }
     }
 }
 
-
-/* ====== Pantalla Login con Firebase (auto-skip si hay sesión) ====== */
+/* ====== Login de Usuario ====== */
 @Composable
 fun LoginScreen(
     onRegisterClick: (() -> Unit)? = null,
@@ -163,12 +192,11 @@ fun LoginScreen(
     var status by remember { mutableStateOf<String?>(null) }
     var loading by remember { mutableStateOf(false) }
 
-    // --- NUEVO: chequeo de sesión persistida ---
+    // Mantengo tu comportamiento de auto-skip si hay sesión
     var isChecking by remember { mutableStateOf(true) }
     LaunchedEffect(Unit) {
         val current = auth.currentUser
         if (current != null) {
-            // Ya hay sesión -> entra directo
             onLoginSuccess?.invoke()
         } else {
             isChecking = false
@@ -176,7 +204,6 @@ fun LoginScreen(
     }
 
     if (isChecking) {
-        // Loader breve mientras se verifica la sesión persistida
         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             CircularProgressIndicator(color = SyntraBlue)
         }
@@ -188,7 +215,9 @@ fun LoginScreen(
             .fillMaxSize()
             .background(SyntraWhite)
     ) {
-        LoginHeader(
+        HeaderWithWave(
+            title = "Ingresa en tu cuenta",
+            subtitle = "Introduce tu email y contraseña para iniciar sesión",
             onBackClick = { onBackClick?.invoke() }
         )
 
@@ -242,9 +271,7 @@ fun LoginScreen(
                         color = SyntraBlue,
                         fontWeight = FontWeight.SemiBold,
                         fontSize = 13.sp,
-                        modifier = Modifier.clickable {
-                            onForgotPassword?.invoke(email)
-                        }
+                        modifier = Modifier.clickable { onForgotPassword?.invoke(email) }
                     )
                 }
 
@@ -259,9 +286,7 @@ fun LoginScreen(
                         } else {
                             auth.signInWithEmailAndPassword(email, password)
                                 .addOnSuccessListener {
-                                    // Guarda el estado del checkbox aquí
                                     prefs.edit().putBoolean("remember_me", rememberMe).apply()
-
                                     status = "Inicio de sesión correcto"
                                     loading = false
                                     onLoginSuccess?.invoke()

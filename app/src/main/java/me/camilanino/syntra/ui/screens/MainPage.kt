@@ -44,7 +44,7 @@ private val SyntraDarkBlue = Color(0xFF273746)
 fun MainPage(navController: NavController, role: String) {
     var userRole by remember { mutableStateOf("usuario") } // por defecto
 
-    // 🔹 Detectar el rol desde Firestore
+    //  Detectar el rol desde Firestore
     LaunchedEffect(Unit) {
         val uid = FirebaseAuth.getInstance().currentUser?.uid
         val db = FirebaseFirestore.getInstance()
@@ -69,7 +69,7 @@ fun MainPage(navController: NavController, role: String) {
             .fillMaxSize()
             .background(SyntraWhite)
     ) {
-        TopSection()
+        TopSection(navController, role)
         Spacer(Modifier.height(26.dp))
         MainContent(navController)
         Spacer(Modifier.height(36.dp))
@@ -81,7 +81,7 @@ fun MainPage(navController: NavController, role: String) {
 
 /* ====== HEADER SUPERIOR ====== */
 @Composable
-fun TopSection() {
+fun TopSection(navController: NavController, role: String) {
     val auth = FirebaseAuth.getInstance()
     val db = FirebaseFirestore.getInstance()
 
@@ -128,9 +128,11 @@ fun TopSection() {
             )
 
             Image(
-                painter = painterResource(id = R.drawable.ic_bell),
+                painter = painterResource(id = R.drawable.campanita),
                 contentDescription = "Notificación",
-                modifier = Modifier.size(22.dp)
+                modifier = Modifier
+                    .size(22.dp)
+                    .clickable { navController.navigate("notifications_screen/$role") }
             )
         }
 
@@ -194,7 +196,8 @@ fun MainContent(navController: NavController) {
             fontSize = 32.sp,
             color = Color.Black,
             textAlign = TextAlign.Center,
-            lineHeight = 38.sp
+            lineHeight = 38.sp,
+            modifier = Modifier.padding(bottom = 10.dp)
         )
 
         Spacer(Modifier.height(8.dp))
@@ -206,7 +209,8 @@ fun MainContent(navController: NavController) {
             fontSize = 16.sp,
             color = SyntraGray.copy(alpha = 0.7f),
             textAlign = TextAlign.Center,
-            lineHeight = 22.sp
+            lineHeight = 22.sp,
+            modifier = Modifier.padding(bottom= 10.dp)
         )
 
         Spacer(Modifier.height(26.dp))
@@ -307,7 +311,7 @@ fun ReportSummary() {
     Surface(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 24.dp, vertical = 12.dp),
+            .padding(start = 5.dp, bottom = 10.dp),
         shape = RoundedCornerShape(24.dp),
         color = Color(0xFFE6E6E6),
         tonalElevation = 2.dp

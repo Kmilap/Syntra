@@ -8,24 +8,31 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.outlined.AccountCircle
 import androidx.compose.material.icons.outlined.ArrowBackIosNew
 import androidx.compose.material.icons.outlined.AssignmentTurnedIn
+import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.Map
 import androidx.compose.material.icons.outlined.RateReview
 import androidx.compose.material.icons.outlined.SmartToy
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.*
 import androidx.compose.ui.graphics.*
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -39,7 +46,7 @@ private val BackgroundGray = Color(0xFFECECEC)
 private val TextDark = Color(0xFF2B2B2B)
 
 /* ====== TARJETAS ====== */
-/* ====== TARJETAS ====== */
+
 @Composable
 private fun CardItem(title: String, navController: NavController, role: String) {
     var pressed by remember { mutableStateOf(false) }
@@ -57,7 +64,7 @@ private fun CardItem(title: String, navController: NavController, role: String) 
         else -> Icons.Outlined.AssignmentTurnedIn
     }
 
-    // === NUEVO BLOQUE: NAVEGACIÓN SEGÚN TÍTULO ===
+
     val destination = when (title) {
         "Hacer reportes" -> "report_screen/$role?fromMenu=true"
         "Mapa" -> "mapa_screen/$role?fromMenu=true"
@@ -123,20 +130,58 @@ private fun CardItem(title: String, navController: NavController, role: String) 
 
 /* ====== BARRA DE BÚSQUEDA ====== */
 @Composable
-private fun CustomSearchBar() {
+private fun CustomSearchBar1(
+    query: String,
+    onQueryChange: (String) -> Unit,
+    onSearch: () -> Unit
+) {
+    val focus = LocalFocusManager.current
+
     OutlinedTextField(
-        value = "",
-        onValueChange = {},
-        placeholder = { Text("Busca servicios", color = SyntraGray.copy(alpha = 0.7f)) },
+        value = query,
+        onValueChange = onQueryChange,
+        placeholder = {
+            Text(
+                text = "Busca servicios",
+                color = SyntraGray.copy(alpha = 0.7f)
+            )
+        },
         leadingIcon = {
-            Icon(Icons.Filled.Search, contentDescription = "Buscar", tint = SyntraGray)
+            Icon(
+                imageVector = Icons.Filled.Search,
+                contentDescription = "Buscar",
+                tint = SyntraGray
+            )
+        },
+        trailingIcon = {
+            if (query.isNotBlank()) {
+                IconButton(
+                    onClick = {
+                        onQueryChange("")
+                        focus.clearFocus()
+                    }
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.Close,
+                        contentDescription = "Limpiar",
+                        tint = SyntraGray
+                    )
+                }
+            }
         },
         singleLine = true,
+        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+        keyboardActions = KeyboardActions(
+            onSearch = {
+                focus.clearFocus()
+                onSearch()
+            }
+        ),
         colors = OutlinedTextFieldDefaults.colors(
             focusedBorderColor = Color.Transparent,
             unfocusedBorderColor = Color.Transparent,
             focusedContainerColor = Color.White,
-            unfocusedContainerColor = Color.White,
+            unfocusedContainerColor = Color.White
         ),
         shape = RoundedCornerShape(25.dp),
         modifier = Modifier
@@ -149,12 +194,25 @@ private fun CustomSearchBar() {
 /* ====== PANTALLA PRINCIPAL ====== */
 @Composable
 fun Menu(navController: NavController, role: String = "usuario") {
+    // --- Estado de búsqueda ---
+    var query by rememberSaveable { mutableStateOf("") }
+    var lastSearched by rememberSaveable { mutableStateOf("") }
+
+    // Lista base
+    val allItems = remember { listOf("Hacer reportes", "Mapa", "Chatbot Syntra", "Feedback") }
+
+    // Filtrado en vivo
+    val filtered = remember(query) {
+        if (query.isBlank()) allItems
+        else allItems.filter { it.contains(query.trim(), ignoreCase = true) }
+    }
+
     Box(
         modifier = Modifier
             .fillMaxSize()
             .background(BackgroundGray)
     ) {
-        // HEADER degradado coral → salmón
+
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -204,29 +262,31 @@ fun Menu(navController: NavController, role: String = "usuario") {
                             .size(38.dp)
                             .clickable {
                                 navController.navigate("profile_user?fromMenu=true")
-
                             }
-
                     )
-
                 }
             }
 
             Spacer(Modifier.height(22.dp))
 
-            // Saludo
+            // Título
             Text(
-                text = "Hola, Juan Diego",
+                text = "Menú",
                 color = Color.White,
-                fontSize = 26.sp,
+                fontSize = 30.sp,
                 fontWeight = FontWeight.Bold,
-                lineHeight = 30.sp
+                lineHeight = 30.sp,
+                modifier = Modifier.padding(start = 5.dp)
             )
 
-            Spacer(Modifier.height(24.dp)) // se bajó la barra
+            Spacer(Modifier.height(24.dp))
 
-            // Barra de búsqueda (ligeramente más abajo)
-            CustomSearchBar()
+            // Barra de búsqueda funcional
+            CustomSearchBar1(
+                query = query,
+                onQueryChange = { query = it },
+                onSearch = { lastSearched = query }
+            )
         }
 
         // CONTENIDO PRINCIPAL
@@ -241,16 +301,37 @@ fun Menu(navController: NavController, role: String = "usuario") {
                 verticalArrangement = Arrangement.spacedBy(24.dp),
                 horizontalArrangement = Arrangement.spacedBy(20.dp)
             ) {
-                item { CardItem("Hacer reportes", navController, role) }
-                item { CardItem("Mapa", navController, role) }
-                item { CardItem("Chatbot Syntra", navController, role) }
-                item { CardItem("Feedback", navController, role) }
+                // Ítems filtrados
+                items(filtered.size) { idx ->
+                    when (filtered[idx]) {
+                        "Hacer reportes" -> CardItem("Hacer reportes", navController, role)
+                        "Mapa" -> CardItem("Mapa", navController, role)
+                        "Chatbot Syntra" -> CardItem("Chatbot Syntra", navController, role)
+                        "Feedback" -> CardItem("Feedback", navController, role)
+                    }
+                }
 
-
+                // Estado vacío
+                if (filtered.isEmpty()) {
+                    item(span = { GridItemSpan(maxLineSpan) }) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(top = 8.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = "Sin resultados para “$query”",
+                                color = SyntraGray.copy(alpha = 0.8f),
+                                fontSize = 14.sp
+                            )
+                        }
+                    }
+                }
             }
         }
 
-        // DEGRADADO INFERIOR con más cuerpo y presencia
+        // DEGRADADO INFERIOR
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -268,7 +349,7 @@ fun Menu(navController: NavController, role: String = "usuario") {
                 )
         )
 
-// Sombra sutil que da cierre visual (colócala justo arriba del degradado)
+        // SOMBRA SUTIL
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -283,7 +364,8 @@ fun Menu(navController: NavController, role: String = "usuario") {
                     )
                 )
         )
-        // SECCIÓN INFERIOR CURVA — CIERRE VISUAL
+
+        // CURVA INFERIOR
         Canvas(
             modifier = Modifier
                 .fillMaxWidth()
@@ -301,7 +383,7 @@ fun Menu(navController: NavController, role: String = "usuario") {
             drawPath(path, Color.White)
         }
 
-// TEXTO DECORATIVO / TAGLINE
+        // TAGLINE
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -318,7 +400,5 @@ fun Menu(navController: NavController, role: String = "usuario") {
                 modifier = Modifier.padding(top = 30.dp)
             )
         }
-
-
     }
 }

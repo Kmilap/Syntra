@@ -6,13 +6,13 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
 /* ==============================================================================
- * CHATBOT BRAIN — Versión híbrida avanzada y coherente
+ * CHATBOT BRAIN
  * Gestiona la lógica local, pasos guiados y decide cuándo usar la IA
  * ============================================================================== */
 
 object ChatbotBrain {
 
-    // === 🧠 1. MENSAJE DE BIENVENIDA ===
+    // ===  1. MENSAJE DE BIENVENIDA ===
     fun getWelcomeMessage(role: String): ChatMessage {
         return if (role == "usuario") {
             ChatMessage(
@@ -27,7 +27,7 @@ object ChatbotBrain {
         }
     }
 
-    // === ⚙️ 2. PROCESADOR PRINCIPAL DEL MENSAJE ===
+    // === PROCESADOR PRINCIPAL DEL MENSAJE ===
     @RequiresApi(Build.VERSION_CODES.VANILLA_ICE_CREAM)
     suspend fun processMessage(
         userText: String,
@@ -37,12 +37,12 @@ object ChatbotBrain {
 
         val lower = userText.lowercase().trim()
 
-        // Guardar mensaje del usuario en la sesión
+
         ChatbotSessionManager.addMessage(role, "user", lower)
 
 
         when {
-            // === 2.1 Respuestas locales inmediatas (ampliadas) ===
+            // === 2.1 Respuestas locales inmediatas ===
             listOf(
                 "hola", "buenas", "buenos dias", "buenas tardes", "buenas noches",
                 "hey", "holi", "holaaa", "que tal", "saludo", "saludos",
@@ -58,10 +58,10 @@ object ChatbotBrain {
                 return@withContext ChatMessage("¡Con gusto! Si necesitas más ayuda, solo escríbeme.", false)
             }
 
-            // === 2.2 Módulo de reportes (crear) ===
-// NOTA: tanto usuario como agente pueden crear reportes; los límites son al editar/borrar (según reglas).
+            // === 2.2 Módulo de reportes ===
+
             listOf(
-                // 30+ variantes comunes (con y sin tildes, cortas y largas)
+
                 "hacer un reporte", "crear reporte", "crear un reporte", "reportar",
                 "nueva falla", "reporte nuevo", "quiero hacer un reporte", "necesito reportar",
                 "como hago un reporte", "cómo hago un reporte", "como reportar", "cómo reportar",
@@ -97,9 +97,9 @@ object ChatbotBrain {
             }
 
 
-            // === 2.3 Módulo de historial (ver mis reportes) ===
+            // === 2.3 Módulo de historial===
             listOf(
-                // 30+ variantes para abrir historial / ver reportes propios
+
                 "ver mis reportes", "mis reportes", "historial", "ver historial", "consultar reportes",
                 "ver antiguos reportes", "revisar mis reportes", "mis incidencias", "revisar historial",
                 "historial de reportes", "mis registros", "ver mis incidencias", "consultar historial",
@@ -125,7 +125,7 @@ object ChatbotBrain {
 
             // === 2.5 Módulo de mapa ===
             listOf(
-                // 30+ variantes
+
                 "mapa", "ver mapa", "abrir mapa", "ver ubicacion", "ver ubicación",
                 "mostrar mapa", "ubicar", "ver punto", "ver marcadores", "ver reportes en mapa",
                 "mapa de reportes", "mapa interactivo", "abrir el mapa", "abrir el mapa de reportes",
@@ -141,9 +141,9 @@ object ChatbotBrain {
                     )
                 )
             }
-            /// === 2.6 Módulo de feedback (solo usuarios) ===
+            /// === 2.6 Módulo de feedback===
             listOf(
-                // 30+ variantes
+
                 "feedback", "dejar feedback", "sugerencia", "sugerencias", "comentario", "comentarios",
                 "quiero opinar", "opinion", "opinión", "dar feedback", "dejar comentario",
                 "dejar sugerencia", "dar sugerencia", "enviar feedback", "enviar comentario",
@@ -170,7 +170,7 @@ object ChatbotBrain {
                 }
             }
 
-            // === 2.7 Módulo de estadísticas (solo tránsito) ===
+            // === 2.7 Módulo de estadísticas  ===
             listOf(
                 // 30+ variantes
                 "estadisticas", "estadísticas", "ver estadísticas", "ver estadisticas",
@@ -222,7 +222,7 @@ object ChatbotBrain {
                 )
             }
 
-            // === 2.9 Aprendizaje guiado / primera vez ===
+            // === 2.9 Aprendizaje guiado===
             listOf("primera vez", "cómo usar", "ayuda", "tutorial", "no sé usar").any { it in lower } -> {
                 return@withContext ChatMessage(
                     text = """
@@ -256,7 +256,7 @@ object ChatbotBrain {
         }
 
         // === 2.10. Si no hay coincidencia local → IA ===
-        // === 2.9 IA con contexto de sesión ===
+
         return@withContext try {
             val previousContext = ChatbotSessionManager.getConversationHistory(role)
             val enhancedPrompt = buildString {
